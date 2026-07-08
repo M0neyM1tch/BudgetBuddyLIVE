@@ -32,7 +32,12 @@ export function RecurringCostAnalyzer({ data }: RecurringCostAnalyzerProps) {
     return (
       <CalculatorEmptyState
         title="Recurring Cost Analyzer needs active recurring rules"
-        description="Create recurring bills or subscriptions in Transactions first. Active rules will show their monthly, annual, and five-year impact here."
+        description="Recurring Costs is the calculator module that reads active recurring rules directly."
+        requirements={[
+          'Create at least one active recurring income or expense rule in Transactions.',
+          'Paused recurring rules and one-time transactions do not appear in this module.',
+          'Use Budget Health or Freedom Number when you want calculations from completed transactions instead.',
+        ]}
       />
     );
   }

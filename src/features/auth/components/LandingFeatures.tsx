@@ -4,8 +4,8 @@ import {
   CalendarClock,
   CheckCircle2,
   CreditCard,
+  Gauge,
   ListChecks,
-  PiggyBank,
   ShieldCheck,
   Sparkles,
   Target,
@@ -27,48 +27,48 @@ type LandingStep = {
 const FEATURES: LandingFeature[] = [
   {
     Icon: Target,
-    label: 'Pick your top priority',
-    tagline: 'Start with the goal that matters most right now.',
+    label: 'Choose an active priority',
+    tagline: 'Start with the financial goal that matters most right now.',
   },
   {
-    Icon: ShieldCheck,
-    label: 'Build a cash buffer',
-    tagline: 'Know how much safety margin you have and what to add next.',
-  },
-  {
-    Icon: CreditCard,
-    label: 'Pay down debt with a clear method',
-    tagline: 'Compare payoff order, pressure, and momentum without a spreadsheet.',
-  },
-  {
-    Icon: PiggyBank,
-    label: 'Save for a major purchase',
-    tagline: 'Track the amount, timeline, monthly gap, and trade-offs.',
-  },
-  {
-    Icon: ArrowLeftRight,
-    label: 'See what changed your timeline',
-    tagline: 'Connect cash-flow changes to earlier or later goal dates.',
+    Icon: CalendarClock,
+    label: 'See the date and gap',
+    tagline: 'Turn the target into a timeline, remaining amount, and monthly need.',
   },
   {
     Icon: ListChecks,
-    label: 'Turn transactions into next actions',
-    tagline: 'Use real spending to decide the next useful move.',
+    label: 'Get the next action',
+    tagline: 'Know the one useful step that keeps the plan moving this month.',
+  },
+  {
+    Icon: WalletCards,
+    label: 'Prove it with cash flow',
+    tagline: 'Use transactions and recurring rules to check whether the plan is realistic.',
+  },
+  {
+    Icon: ArrowLeftRight,
+    label: 'Compare trade-offs',
+    tagline: 'Model target dates, contribution changes, category shifts, and payoff scenarios.',
+  },
+  {
+    Icon: Gauge,
+    label: 'Feel the momentum',
+    tagline: 'See progress, monthly gaps, and plan confidence update as your numbers change.',
   },
 ];
 
 const HOW_IT_WORKS: LandingStep[] = [
   {
     title: 'Choose your priority.',
-    body: 'Tell BudgetBuddy whether you are focused on a buffer, debt, a purchase, or a custom goal.',
+    body: 'Tell BudgetBuddy whether you are focused on a buffer, debt payoff, a major purchase, or a custom goal.',
   },
   {
     title: 'BudgetBuddy builds your starter plan.',
-    body: 'The app creates the goal, planning assumptions, and first action so you are not starting from blank.',
+    body: 'The app creates the goal, estimates the monthly need, and gives you a first action so you are not starting from blank.',
   },
   {
-    title: 'Your dashboard updates as your money changes.',
-    body: 'Transactions, recurring rules, debts, and goals keep the plan honest over time.',
+    title: 'Your dashboard turns updates into momentum.',
+    body: 'Transactions, recurring rules, debts, and goals keep the date, gap, confidence, and next action current.',
   },
 ];
 
@@ -98,8 +98,8 @@ const GOAL_PACKS: LandingFeature[] = [
 const PROGRESS_SIGNALS: LandingFeature[] = [
   {
     Icon: CalendarClock,
-    label: 'Debt-free date moved closer',
-    tagline: 'See the timeline effect when payments, rates, or spending change.',
+    label: 'Target date moved closer',
+    tagline: 'See the timeline effect when savings, payments, or spending change.',
   },
   {
     Icon: ShieldCheck,
@@ -109,7 +109,7 @@ const PROGRESS_SIGNALS: LandingFeature[] = [
   {
     Icon: BarChart2,
     label: 'Monthly gap reduced',
-    tagline: 'Watch the remaining monthly amount shrink as the plan improves.',
+    tagline: 'Watch the amount needed each month shrink as the plan improves.',
   },
   {
     Icon: CheckCircle2,
@@ -149,7 +149,7 @@ export function LandingFeatures() {
       <section className="landing-section" aria-labelledby="landing-features-title">
         <div className="landing-section__header">
           <p className="landing-eyebrow">What BudgetBuddy helps with</p>
-          <h2 id="landing-features-title">Turn your financial goals into a clear, actionable plan.</h2>
+          <h2 id="landing-features-title">Turn a goal into a date, monthly gap, and next action.</h2>
         </div>
 
         <FeatureGrid features={FEATURES} />
@@ -158,7 +158,7 @@ export function LandingFeatures() {
       <section className="landing-section landing-section--plain" aria-labelledby="landing-how-title">
         <div className="landing-section__header">
           <p className="landing-eyebrow">How it works</p>
-          <h2 id="landing-how-title">A plan that starts simple and gets sharper as you use it.</h2>
+          <h2 id="landing-how-title">A simple plan that gets sharper as real money moves.</h2>
         </div>
 
         <div className="landing-steps">
@@ -184,7 +184,7 @@ export function LandingFeatures() {
       <section className="landing-section landing-section--plain" aria-labelledby="landing-progress-title">
         <div className="landing-section__header">
           <p className="landing-eyebrow">Progress you can feel</p>
-          <h2 id="landing-progress-title">Small updates should show you what actually changed.</h2>
+          <h2 id="landing-progress-title">Small updates should make the plan visibly better.</h2>
         </div>
 
         <FeatureGrid features={PROGRESS_SIGNALS} variant="compact" />

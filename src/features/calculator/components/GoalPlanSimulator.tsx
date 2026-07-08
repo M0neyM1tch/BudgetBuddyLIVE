@@ -183,7 +183,12 @@ export function GoalPlanSimulator({ data }: GoalPlanSimulatorProps) {
     return (
       <CalculatorEmptyState
         title="Choose an active priority first"
-        description="The Goal Plan simulator adapts to your active Goal Pack once onboarding creates a goal plan."
+        description="The Goal Plan simulator adapts to your active Goal Pack once onboarding creates a plan."
+        requirements={[
+          'Complete onboarding or choose an active priority from the dashboard.',
+          'Create a goal with a target amount so BudgetBuddy has something to simulate.',
+          'Recent expense transactions are only required for category-shift scenarios.',
+        ]}
         action={
           <Link className="calculator-inline-action" to="/dashboard">
             Go to Dashboard
@@ -317,6 +322,13 @@ export function GoalPlanSimulator({ data }: GoalPlanSimulatorProps) {
                   priority.currency_code,
                 )}
               </p>
+              {categories.length === 0 ? (
+                <p className="calculator-scenario-note">
+                  Category-shift scenarios need actual expense transactions in the last
+                  six full months. Recurring rules will appear here after they generate
+                  dated transactions.
+                </p>
+              ) : null}
             </>
           ) : null}
 

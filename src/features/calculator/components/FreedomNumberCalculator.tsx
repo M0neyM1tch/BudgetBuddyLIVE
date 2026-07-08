@@ -49,7 +49,12 @@ export function FreedomNumberCalculator({ data }: FreedomNumberCalculatorProps) 
     return (
       <CalculatorEmptyState
         title="Freedom Number needs spending history"
-        description="Add income and expenses in Transactions first. This calculator becomes more useful when it can start with your real monthly spending."
+        description="Freedom Number estimates monthly spending from actual expense transactions in the calculator history window."
+        requirements={[
+          'Add expense transactions dated within the last six full months.',
+          'Goals can help prefill current saved or invested amounts when available.',
+          'Recurring rules are not treated as completed spending until they generate transactions.',
+        ]}
       />
     );
   }

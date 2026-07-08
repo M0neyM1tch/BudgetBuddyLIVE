@@ -40,7 +40,12 @@ export function BudgetHealthScorer({ data }: BudgetHealthScorerProps) {
     return (
       <CalculatorEmptyState
         title="Budget Health needs income for the selected month"
-        description="Add income and expense transactions for a full month before calculating a useful budget health score."
+        description="Budget Health calculates from dated transaction history for the month you select."
+        requirements={[
+          'Add at least one income transaction dated in the selected month.',
+          'Add expense transactions in that same month so BudgetBuddy can split needs, wants, and savings.',
+          'Recurring rules only count here after they create dated transactions.',
+        ]}
       />
     );
   }

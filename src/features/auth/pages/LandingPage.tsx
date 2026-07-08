@@ -29,10 +29,10 @@ export function LandingPage() {
       <LandingHero />
       <LandingFeatures />
       <section className="landing-final-cta" aria-labelledby="landing-final-title">
-        <h2 id="landing-final-title">Start with a plan you can adjust.</h2>
+        <h2 id="landing-final-title">Start with the priority that matters now.</h2>
         <p>
-          Create your account, choose your top priority, and let BudgetBuddy turn your
-          real numbers into a dashboard, timeline, and next action.
+          Create your account, choose your top financial priority, and let BudgetBuddy
+          turn your real numbers into a dashboard, monthly plan, and next action.
         </p>
         <p className="landing-final-cta__disclaimer">
           BudgetBuddy provides educational estimates and planning scenarios, not financial,
