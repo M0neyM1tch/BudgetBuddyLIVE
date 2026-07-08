@@ -198,10 +198,24 @@ Reason:
 - Zone-level traffic analytics remain in Cloudflare.
 - Pages-project analytics may be project-specific, so creating a new Pages project could split historical Pages analytics from future Pages analytics.
 
+Verified Cloudflare domain/project state:
+
+- `budg.ca` is present in Cloudflare Registrar.
+- Registrar expiry: `2026-10-24T14:13:09.000Z`
+- Auto-renew: enabled
+- Domain lock: enabled
+- Existing live Pages project: `budgetbuddy`
+- Existing live project custom domain: `budg.ca`
+- Existing live project custom domain status: active
+- Existing live project Web Analytics tag: present
+- V2 staging Pages project: `budgetbuddy-v2`
+- V2 staging custom domains: none yet
+
 For traffic data:
 
 - Use Cloudflare Web Analytics / zone analytics in the dashboard for operational review.
 - Use Cloudflare GraphQL Analytics API later if a CSV/API export workflow is needed.
+- The current Codex Cloudflare connector can read Pages and Registrar state, but zone DNS/Web Analytics reads returned Cloudflare API auth errors. To export traffic analytics through Codex, grant the connector/API token zone analytics/Web Analytics read access.
 
 ## Cutover Definition Of Done
 
