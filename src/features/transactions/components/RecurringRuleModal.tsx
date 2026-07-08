@@ -225,20 +225,22 @@ function RecurringRuleModalContent({
           <input
             type="date"
             value={form.start_date}
-            onInput={(event) =>
+            onInput={(event) => {
+              const { value } = event.currentTarget;
               setForm((current) => ({
                 ...current,
-                start_date: event.currentTarget.value,
-                next_run_date: rule ? current.next_run_date : event.currentTarget.value,
-              }))
-            }
-            onChange={(event) =>
+                start_date: value,
+                next_run_date: rule ? current.next_run_date : value,
+              }));
+            }}
+            onChange={(event) => {
+              const { value } = event.currentTarget;
               setForm((current) => ({
                 ...current,
-                start_date: event.currentTarget.value,
-                next_run_date: rule ? current.next_run_date : event.currentTarget.value,
-              }))
-            }
+                start_date: value,
+                next_run_date: rule ? current.next_run_date : value,
+              }));
+            }}
           />
         </label>
 
@@ -261,12 +263,14 @@ function RecurringRuleModalContent({
             <input
               type="date"
               value={form.next_run_date}
-              onInput={(event) =>
-                setForm((current) => ({ ...current, next_run_date: event.currentTarget.value }))
-              }
-              onChange={(event) =>
-                setForm((current) => ({ ...current, next_run_date: event.currentTarget.value }))
-              }
+              onInput={(event) => {
+                const { value } = event.currentTarget;
+                setForm((current) => ({ ...current, next_run_date: value }));
+              }}
+              onChange={(event) => {
+                const { value } = event.currentTarget;
+                setForm((current) => ({ ...current, next_run_date: value }));
+              }}
             />
           </label>
         ) : null}
