@@ -61,7 +61,8 @@ export function PeriodSelector({ value, onChange }: PeriodSelectorProps) {
             <input
               type="date"
               value={draftFrom}
-              onChange={(event) => setDraftFrom(event.target.value)}
+              onInput={(event) => setDraftFrom(event.currentTarget.value)}
+              onChange={(event) => setDraftFrom(event.currentTarget.value)}
             />
           </label>
           <label>
@@ -69,7 +70,8 @@ export function PeriodSelector({ value, onChange }: PeriodSelectorProps) {
             <input
               type="date"
               value={draftTo}
-              onChange={(event) => setDraftTo(event.target.value)}
+              onInput={(event) => setDraftTo(event.currentTarget.value)}
+              onChange={(event) => setDraftTo(event.currentTarget.value)}
             />
           </label>
           <button type="button" onClick={applyCustomRange} disabled={!validation.isValid}>

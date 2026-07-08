@@ -11,7 +11,7 @@ vi.mock('../../../shared/lib/supabase', () => ({
   },
 }));
 
-const { createRecurringRule, createTransaction } = await import('./transactions.api');
+const { createRecurringRule, createTransaction, updateRecurringRule } = await import('./transactions.api');
 
 const baseDraft: TransactionDraft = {
   amount_cents: 12_345,
@@ -188,5 +188,34 @@ describe('createRecurringRule', () => {
     });
     expect(fromMock).toHaveBeenCalledTimes(1);
     expect(result.next_run_date).toBe('2026-06-01');
+  });
+});
+
+describe('updateRecurringRule', () => {
+  beforeEach(() => {
+    rpcMock.mockReset();
+    fromMock.mockReset();
+    vi.useRealTimers();
+  });
+
+  it('does not apply create defaults to partial toggle updates', async () => {
+    const updateSingleMock = vi.fn().mockResolvedValueOnce({
+      data: {
+        id: 'rule-id',
+        description: 'Monthly essential bills',
+        is_active: false,
+      },
+      error: null,
+    });
+    const updateSelectMock = vi.fn(() => ({ single: updateSingleMock }));
+    const userEqMock = vi.fn(() => ({ select: updateSelectMock }));
+    const idEqMock = vi.fn(() => ({ eq: userEqMock }));
+    const updateMock = vi.fn(() => ({ eq: idEqMock }));
+
+    fromMock.mockReturnValueOnce({ update: updateMock });
+
+    await updateRecurringRule('user-id', 'rule-id', { is_active: false });
+
+    expect(updateMock).toHaveBeenCalledWith({ is_active: false });
   });
 });

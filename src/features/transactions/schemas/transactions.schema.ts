@@ -87,17 +87,17 @@ export const transactionUpdateSchema = transactionDraftSchema.partial().refine(
   'At least one transaction field is required.',
 );
 
-export const recurringRuleDraftSchema = z.object({
+const recurringRuleBaseSchema = z.object({
   amount_cents: amountCentsSchema,
   kind: transactionKindSchema,
   category: transactionCategorySchema,
   debt_id: z.string().uuid().nullable().optional(),
-  description: z.string().trim().max(120).optional().default(''),
+  description: z.string().trim().max(120).optional(),
   frequency: recurringFrequencySchema,
   start_date: isoDateSchema,
   next_run_date: isoDateSchema,
   day_of_month: z.number().int().min(1).max(31).nullable(),
-  is_active: z.boolean().default(true),
+  is_active: z.boolean(),
   notes: z
     .string()
     .trim()
@@ -105,10 +105,16 @@ export const recurringRuleDraftSchema = z.object({
     .nullable()
     .optional()
     .transform((value) => value || null),
-  skip_backdate: z.boolean().optional().default(false),
+  skip_backdate: z.boolean().optional(),
 });
 
-export const recurringRuleUpdateSchema = recurringRuleDraftSchema.partial().refine(
+export const recurringRuleDraftSchema = recurringRuleBaseSchema.extend({
+  description: recurringRuleBaseSchema.shape.description.default(''),
+  is_active: recurringRuleBaseSchema.shape.is_active.default(true),
+  skip_backdate: recurringRuleBaseSchema.shape.skip_backdate.default(false),
+});
+
+export const recurringRuleUpdateSchema = recurringRuleBaseSchema.partial().refine(
   (value) => Object.keys(value).length > 0,
   'At least one recurring rule field is required.',
 );

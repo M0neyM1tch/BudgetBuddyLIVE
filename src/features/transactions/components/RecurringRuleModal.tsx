@@ -225,11 +225,18 @@ function RecurringRuleModalContent({
           <input
             type="date"
             value={form.start_date}
+            onInput={(event) =>
+              setForm((current) => ({
+                ...current,
+                start_date: event.currentTarget.value,
+                next_run_date: rule ? current.next_run_date : event.currentTarget.value,
+              }))
+            }
             onChange={(event) =>
               setForm((current) => ({
                 ...current,
-                start_date: event.target.value,
-                next_run_date: rule ? current.next_run_date : event.target.value,
+                start_date: event.currentTarget.value,
+                next_run_date: rule ? current.next_run_date : event.currentTarget.value,
               }))
             }
           />
@@ -254,8 +261,11 @@ function RecurringRuleModalContent({
             <input
               type="date"
               value={form.next_run_date}
+              onInput={(event) =>
+                setForm((current) => ({ ...current, next_run_date: event.currentTarget.value }))
+              }
               onChange={(event) =>
-                setForm((current) => ({ ...current, next_run_date: event.target.value }))
+                setForm((current) => ({ ...current, next_run_date: event.currentTarget.value }))
               }
             />
           </label>

@@ -265,8 +265,11 @@ export function GoalPlanSimulator({ data }: GoalPlanSimulatorProps) {
                 <input
                   type="date"
                   value={scenario.targetDate ?? ''}
+                  onInput={(event) =>
+                    updateScenario({ targetDate: event.currentTarget.value || null })
+                  }
                   onChange={(event) =>
-                    updateScenario({ targetDate: event.target.value || null })
+                    updateScenario({ targetDate: event.currentTarget.value || null })
                   }
                 />
               </div>

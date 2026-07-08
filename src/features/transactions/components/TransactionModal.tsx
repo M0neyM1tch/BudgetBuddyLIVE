@@ -213,8 +213,11 @@ function TransactionModalContent({
           <input
             type="date"
             value={form.transaction_date}
+            onInput={(event) =>
+              setForm((current) => ({ ...current, transaction_date: event.currentTarget.value }))
+            }
             onChange={(event) =>
-              setForm((current) => ({ ...current, transaction_date: event.target.value }))
+              setForm((current) => ({ ...current, transaction_date: event.currentTarget.value }))
             }
           />
         </label>
@@ -346,8 +349,17 @@ function TransactionModalContent({
               <input
                 type="date"
                 value={form.recurring_start_date}
+                onInput={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    recurring_start_date: event.currentTarget.value,
+                  }))
+                }
                 onChange={(event) =>
-                  setForm((current) => ({ ...current, recurring_start_date: event.target.value }))
+                  setForm((current) => ({
+                    ...current,
+                    recurring_start_date: event.currentTarget.value,
+                  }))
                 }
               />
             </label>

@@ -259,8 +259,11 @@ function DebtModalContent({
           <input
             type="date"
             value={form.startDate}
+            onInput={(event) =>
+              setForm((current) => ({ ...current, startDate: event.currentTarget.value }))
+            }
             onChange={(event) =>
-              setForm((current) => ({ ...current, startDate: event.target.value }))
+              setForm((current) => ({ ...current, startDate: event.currentTarget.value }))
             }
           />
         </label>

@@ -92,7 +92,12 @@ export function AllocateModal({
 
         <label className="goal-form-field">
           <span>Date</span>
-          <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+          <input
+            type="date"
+            value={date}
+            onInput={(event) => setDate(event.currentTarget.value)}
+            onChange={(event) => setDate(event.currentTarget.value)}
+          />
         </label>
 
         <label className="goal-form-field goal-form-field--wide">

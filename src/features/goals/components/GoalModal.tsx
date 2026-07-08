@@ -166,8 +166,11 @@ function GoalModalContent({
           <input
             type="date"
             value={form.targetDate}
+            onInput={(event) =>
+              setForm((current) => ({ ...current, targetDate: event.currentTarget.value }))
+            }
             onChange={(event) =>
-              setForm((current) => ({ ...current, targetDate: event.target.value }))
+              setForm((current) => ({ ...current, targetDate: event.currentTarget.value }))
             }
           />
         </label>

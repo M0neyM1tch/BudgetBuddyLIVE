@@ -46,7 +46,8 @@ export function TransactionFilters({
         <input
           type="date"
           value={filters.from ?? ''}
-          onChange={(event) => onChange({ from: event.target.value || undefined })}
+          onInput={(event) => onChange({ from: event.currentTarget.value || undefined })}
+          onChange={(event) => onChange({ from: event.currentTarget.value || undefined })}
         />
       </label>
 
@@ -55,7 +56,8 @@ export function TransactionFilters({
         <input
           type="date"
           value={filters.to ?? ''}
-          onChange={(event) => onChange({ to: event.target.value || undefined })}
+          onInput={(event) => onChange({ to: event.currentTarget.value || undefined })}
+          onChange={(event) => onChange({ to: event.currentTarget.value || undefined })}
         />
       </label>
 

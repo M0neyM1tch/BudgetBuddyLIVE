@@ -529,7 +529,8 @@ export function GoalPackOnboardingWizard({ isOpen }: GoalPackOnboardingWizardPro
                 <input
                   type="date"
                   value={form.targetDate}
-                  onChange={(event) => updateField('targetDate', event.target.value)}
+                  onInput={(event) => updateField('targetDate', event.currentTarget.value)}
+                  onChange={(event) => updateField('targetDate', event.currentTarget.value)}
                 />
               </label>
             </div>
@@ -555,7 +556,8 @@ export function GoalPackOnboardingWizard({ isOpen }: GoalPackOnboardingWizardPro
                 <input
                   type="date"
                   value={form.recurringStartDate}
-                  onChange={(event) => updateField('recurringStartDate', event.target.value)}
+                  onInput={(event) => updateField('recurringStartDate', event.currentTarget.value)}
+                  onChange={(event) => updateField('recurringStartDate', event.currentTarget.value)}
                 />
               </label>
 
