@@ -3,6 +3,8 @@
     radial-gradient(circle at 20% 0%, rgba(16, 185, 129, 0.12), transparent 28rem),
     var(--gradient-bg);
   min-height: 100dvh;
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 .shell-topnav {
@@ -121,19 +123,42 @@
 .shell-topnav-actions {
   align-items: center;
   display: flex;
-  gap: var(--space-3);
+  gap: var(--space-2);
   justify-content: flex-end;
   min-width: 0;
 }
 
-.shell-account {
+.shell-preferences-action {
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
   color: var(--color-text-muted);
-  display: block;
-  font-size: var(--text-xs);
-  max-width: 14rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: inline-flex;
+  flex: 0 0 2.25rem;
+  height: 2.25rem;
+  justify-content: center;
+  transition:
+    background var(--transition),
+    border-color var(--transition),
+    color var(--transition);
+  width: 2.25rem;
+}
+
+.shell-preferences-action:hover,
+.shell-preferences-action--active {
+  background: var(--color-primary-dim);
+  border-color: var(--color-primary-border);
+  color: var(--color-primary-hover);
+}
+
+.shell-preferences-icon {
+  fill: currentColor;
+  height: 1.125rem;
+  width: 1.125rem;
+}
+
+.shell-signout-button {
+  flex: 0 0 auto;
 }
 
 .shell-workspace {
@@ -168,41 +193,41 @@
     grid-template-columns: minmax(0, 1fr) auto;
     min-height: 4.25rem;
     padding: var(--space-3) var(--space-4);
+    position: static;
   }
 
   .shell-desktop-nav {
     display: none;
   }
 
-  .shell-account {
-    display: none;
-  }
-
   .shell-brand {
-    max-width: min(15rem, 62vw);
+    max-width: 100%;
   }
 
   .shell-workspace {
-    min-height: calc(100dvh - 4.25rem);
+    min-height: auto;
   }
 
   .shell-main {
-    padding: var(--space-5) var(--space-4) 6rem;
+    max-width: 100vw;
+    padding: var(--space-5) var(--space-4) var(--space-8);
   }
 
   .shell-mobile-nav {
     background: rgba(18, 24, 38, 0.98);
-    border-top: 1px solid var(--color-border);
-    bottom: 0;
-    box-shadow: 0 -12px 28px rgba(0, 0, 0, 0.28);
+    border-block: 1px solid var(--color-border);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2);
     display: grid;
     gap: var(--space-1);
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-    left: 0;
-    padding: var(--space-2);
-    position: fixed;
-    right: 0;
-    z-index: 50;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    margin: 0;
+    max-width: 100vw;
+    overflow-x: clip;
+    padding: var(--space-2) var(--space-3);
+    position: sticky;
+    top: 0;
+    width: 100%;
+    z-index: 30;
   }
 
   .shell-mobile-nav-item {
@@ -220,6 +245,7 @@
     overflow: hidden;
     padding: var(--space-1);
     text-align: center;
+    white-space: nowrap;
   }
 
   .shell-mobile-nav-item--active {
@@ -249,7 +275,25 @@
     display: none;
   }
 
+  .shell-signout-button {
+    padding-inline: var(--space-2);
+  }
+
   .shell-mobile-nav-item {
     font-size: 0.5625rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .shell-topnav {
+    gap: var(--space-2);
+  }
+
+  .shell-brand-meta {
+    display: none;
+  }
+
+  .shell-main {
+    padding-inline: var(--space-3);
   }
 }

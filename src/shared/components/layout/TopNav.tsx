@@ -4,11 +4,14 @@ import type { ShellNavItem } from './navItems';
 
 type TopNavProps = {
   items: ShellNavItem[];
+  preferencesItem: ShellNavItem;
   userEmail?: string;
   onSignOut: () => void;
 };
 
-export function TopNav({ items, userEmail, onSignOut }: TopNavProps) {
+export function TopNav({ items, preferencesItem, userEmail, onSignOut }: TopNavProps) {
+  const PreferencesIcon = preferencesItem.Icon;
+
   return (
     <header className="shell-topnav">
       <NavLink to="/dashboard" className="shell-brand" aria-label="BudgetBuddy dashboard">
@@ -36,10 +39,24 @@ export function TopNav({ items, userEmail, onSignOut }: TopNavProps) {
       </nav>
 
       <div className="shell-topnav-actions">
-        <span className="shell-account" title={userEmail}>
-          {userEmail ?? 'Signed in'}
-        </span>
-        <Button type="button" variant="ghost" size="sm" onClick={onSignOut}>
+        <NavLink
+          to={preferencesItem.to}
+          aria-label={preferencesItem.label}
+          title={preferencesItem.label}
+          className={({ isActive }) =>
+            `shell-preferences-action ${isActive ? 'shell-preferences-action--active' : ''}`
+          }
+        >
+          <PreferencesIcon className="shell-preferences-icon" />
+        </NavLink>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={onSignOut}
+          className="shell-signout-button"
+          title={userEmail ? `Sign out ${userEmail}` : 'Sign out'}
+        >
           Sign out
         </Button>
       </div>

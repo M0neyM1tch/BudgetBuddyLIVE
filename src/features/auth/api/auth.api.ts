@@ -52,6 +52,11 @@ export async function signOut() {
   if (error) throw error;
 }
 
+export async function clearLocalSession() {
+  const { error } = await supabase.auth.signOut({ scope: 'local' });
+  if (error) throw error;
+}
+
 export function subscribeToAuthChanges(
   callback: (event: AuthChangeEvent, session: Session | null) => void,
 ) {

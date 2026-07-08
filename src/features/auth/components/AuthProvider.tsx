@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { queryClient } from '../../../shared/api/queryClient';
 import { AuthContext } from '../AuthContext';
 import {
+  clearLocalSession,
   getCurrentSession,
   signInWithPassword,
   signOut as signOutRequest,
@@ -36,6 +37,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
       .catch(() => {
         if (!isMounted) return;
+        void clearLocalSession().catch(() => undefined);
+        queryClient.clear();
         setState({
           session: null,
           user: null,
