@@ -11,9 +11,11 @@
 }
 
 .page {
+  inline-size: 100%;
   min-width: 0;
   width: 100%;
   max-width: min(var(--content-default), 100%);
+  overflow-wrap: break-word;
 }
 
 .page--wide {
