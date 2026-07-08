@@ -2,7 +2,7 @@
 
 Last updated: 2026-07-07
 
-This note records the exact remaining production deployment work for moving the public BudgetBuddy site from the current V1 Cloudflare Pages setup to the V2 Goal Packs deployment repo.
+This note records the production deployment work for moving the public BudgetBuddy site from the previous V1 Cloudflare Pages setup to the V2 Goal Packs deployment repo.
 
 ## Current Verified State
 
@@ -17,11 +17,16 @@ This note records the exact remaining production deployment work for moving the 
 - V2 staging Pages project: `budgetbuddy-v2`
 - V2 staging URL: `https://budgetbuddy-v2.pages.dev`
 - V2 staging deployment: `a884b28b-33a4-436f-83a8-8137d1046639`
+- Live Pages project: `budgetbuddy`
+- Live production deployment: `07dc6044-3b58-4d9b-8bd2-06271f08d9bb`
+- Live production deployment commit: `4386d8c1b94661202d3fb40f464a7d975033f121`
+- Live production deployment status: success
+- Live production aliases: `https://budg.ca`
 - Vite build output: `dist`
 - SPA fallback exists: `public/_redirects` contains `/* /index.html 200`
 - Live Supabase app tables have RLS enabled.
 - Live Supabase app tables and public RPCs currently have no `anon` or `public` grants.
-- `process-recurring` Edge Function is deployed as version 3 with JWT verification enabled.
+- `process-recurring` Edge Function is deployed as version 4 with JWT verification enabled.
 - `APP_ENV=production` and `ALLOWED_ORIGINS` are set for the V2 Edge Function.
 
 ## Codex Cloudflare Access Check
@@ -38,7 +43,7 @@ Result:
 You are not authenticated. Please run `wrangler login`.
 ```
 
-The Cloudflare API connector was used instead of Wrangler to create the V2 staging project. A direct live `budg.ca` cutover still requires explicit approval because it mutates the existing production Pages project.
+The Cloudflare API connector was used instead of Wrangler to create the V2 staging project and perform the approved live `budg.ca` cutover.
 
 ## V2 Staging Project Created
 
@@ -59,57 +64,49 @@ Verified configuration:
   - `https://budgetbuddy-v2.pages.dev/signup/confirm-email`
   - `https://budgetbuddy-v2.pages.dev/dashboard`
 
-The existing production project `budgetbuddy` remains unchanged and still serves `budg.ca` from the V1 repo until a live cutover is explicitly approved.
+The existing production project `budgetbuddy` now serves `budg.ca` from `M0neyM1tch/BudgetBuddyLIVE` on `main`.
 
 ## Cloudflare Pages Repo Cutover
 
-Preferred path: update the existing Cloudflare Pages project if Cloudflare Dashboard allows the Git configuration change cleanly.
+Completed path: the existing Cloudflare Pages project was updated in place so the domain and Web Analytics association remained on the same project.
 
-1. Cloudflare Dashboard -> Workers & Pages.
-2. Open the current BudgetBuddy Pages project serving `budg.ca`.
-3. Go to Settings.
-4. Update Git configuration to:
-   - Git provider: GitHub
-   - Repository: `M0neyM1tch/BudgetBuddyLIVE`
-   - Production branch: `main`
-5. Confirm build settings:
-   - Framework preset: React / Vite, or manual settings
-   - Build command: `npm run build`
-   - Build output directory: `dist`
-   - Root directory: repository root
-6. Save and trigger a production deployment.
+Verified live configuration:
 
-Fallback path if the existing Pages project cannot be safely re-linked:
+- Git provider: GitHub
+- Repository: `M0neyM1tch/BudgetBuddyLIVE`
+- Production branch: `main`
+- Build command: `npm run build`
+- Build output directory: `dist`
+- Root directory: repository root
+- Production deployment ID: `07dc6044-3b58-4d9b-8bd2-06271f08d9bb`
+- Production deployment status: success
+- Production alias: `https://budg.ca`
 
-1. Create a new Cloudflare Pages project from `M0neyM1tch/BudgetBuddyLIVE`.
-2. Deploy `main` successfully on the generated `*.pages.dev` URL first.
-3. Add `budg.ca` as a custom domain on the new Pages project.
-4. Remove the old Pages custom domain/DNS association only when the new project is ready.
-5. Keep the Cloudflare zone/domain in Cloudflare. Do not transfer the domain away for this cutover.
+The separate `budgetbuddy-v2` Pages project remains available as staging. It has no custom domain attached.
 
 ## Cloudflare Pages Environment Variables
 
-Set these for the production environment:
+Set for the production and preview environments on the live `budgetbuddy` Pages project:
 
 ```text
 NODE_VERSION=22.13.0
 VITE_SUPABASE_URL=https://cebykmbauxbucvforwzj.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=<current Supabase publishable key>
 VITE_GOAL_PACKS_ENABLED=true
+VITE_APP_VERSION=2.0.0
 ```
 
-Optional:
+Removed legacy V1 variables from the live project:
 
 ```text
-VITE_APP_VERSION=2.0.0
+VITE_APP_URL
+VITE_GAMIFICATION_ENABLED
+VITE_SUPABASE_ANON_KEY
 ```
 
 Do not set or expose any Supabase service-role key in Cloudflare Pages frontend environment variables. The app only needs the publishable key.
 
-Preview deployment choice:
-
-- If preview deployments should hit the same Supabase project during pre-launch testing, copy the same non-secret Vite variables into Preview.
-- If preview deployments should be isolated later, create a separate Supabase project/branch and use that project URL and publishable key for Preview.
+Preview deployments currently hit the same V2 Supabase project during pre-launch testing. If preview deployments should be isolated later, create a separate Supabase project/branch and use that project URL and publishable key for Preview.
 
 ## Supabase Auth URL Configuration
 
@@ -143,6 +140,8 @@ Only keep `/auth/callback` if OAuth/social login is added or a callback route is
 
 Supabase guidance: use exact redirect URLs in production. Wildcards are useful for local and preview deployments, but production should stay tight.
 
+Codex could not verify managed-project Site URL or Redirect URLs through the available Supabase connector/CLI. The public Auth settings endpoint only exposes general auth flags, not Site URL or Redirect URL configuration. Confirm these values in Supabase Dashboard before full public launch.
+
 ## Supabase Edge Function Environment
 
 Current Edge Function secrets/environment variables for `process-recurring`:
@@ -163,8 +162,8 @@ Keep `http://localhost:5173` only while local production-data testing is intenti
 Verified preflight:
 
 ```text
-Origin: https://budgetbuddy-v2.pages.dev
-Access-Control-Allow-Origin: https://budgetbuddy-v2.pages.dev
+Origin: https://budg.ca
+Access-Control-Allow-Origin: https://budg.ca
 Status: 200
 ```
 
@@ -208,6 +207,8 @@ Verified Cloudflare domain/project state:
 - Existing live project custom domain: `budg.ca`
 - Existing live project custom domain status: active
 - Existing live project Web Analytics tag: present
+- Existing live project source: `M0neyM1tch/BudgetBuddyLIVE`
+- Existing live project production branch: `main`
 - V2 staging Pages project: `budgetbuddy-v2`
 - V2 staging custom domains: none yet
 
@@ -219,14 +220,14 @@ For traffic data:
 
 ## Cutover Definition Of Done
 
-- Cloudflare Pages production deployment is connected to `M0neyM1tch/BudgetBuddyLIVE`.
-- Production branch is `main`.
-- Production build succeeds with `npm run build` and output directory `dist`.
-- `https://budg.ca` serves the V2 Goal Packs app.
-- SPA routes refresh correctly, including `/dashboard`, `/reset-password`, and `/signup/confirm-email`.
-- Supabase Auth Site URL is `https://budg.ca`.
-- Supabase Redirect URLs include the required production URLs.
-- `process-recurring` CORS allows the production domain through `ALLOWED_ORIGINS`.
+- Cloudflare Pages production deployment is connected to `M0neyM1tch/BudgetBuddyLIVE`. Complete.
+- Production branch is `main`. Complete.
+- Production build succeeds with `npm run build` and output directory `dist`. Complete.
+- `https://budg.ca` serves the V2 Goal Packs app. Complete; public routes return HTTP `200`.
+- SPA routes refresh correctly, including `/dashboard`, `/reset-password`, and `/signup/confirm-email`. Complete; routes return HTTP `200`.
+- Supabase Auth Site URL is `https://budg.ca`. Manual dashboard confirmation remains.
+- Supabase Redirect URLs include the required production URLs. Manual dashboard confirmation remains.
+- `process-recurring` CORS allows the production domain through `ALLOWED_ORIGINS`. Complete.
 - Test signup, email confirmation, password reset, onboarding, recurring backdating, dashboard actions, and transactions work on the production domain.
-- Supabase Data API automatic exposure remains disabled/manual for future objects.
-- Cloudflare analytics/domain remain in Cloudflare.
+- Supabase Data API automatic exposure remains disabled/manual for future objects. Manual dashboard control remains; current object grants/RLS are verified.
+- Cloudflare analytics/domain remain in Cloudflare. Complete.
