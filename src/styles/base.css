@@ -10,6 +10,10 @@
 html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  inline-size: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-x: clip;
   scroll-behavior: smooth;
   text-rendering: optimizeLegibility;
 }
@@ -20,8 +24,12 @@ body {
   font-size: var(--text-base);
   color: var(--color-text);
   background: var(--color-bg);
+  inline-size: 100%;
   line-height: 1.6;
+  max-width: 100%;
   overflow-x: hidden;
+  overflow-x: clip;
+  overscroll-behavior-x: none;
 }
 
 img, picture, svg, video { display: block; max-width: 100%; }
@@ -30,7 +38,12 @@ button { cursor: pointer; background: none; border: none; }
 a { color: inherit; text-decoration: none; }
 
 #root {
+  inline-size: 100%;
   min-height: 100dvh;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 h1, h2, h3, h4, h5, h6 {

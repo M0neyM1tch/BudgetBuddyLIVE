@@ -2,6 +2,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
+  min-width: 0;
 }
 
 .calculator-page-header {
@@ -19,6 +20,8 @@
   border-radius: var(--radius-lg);
   display: flex;
   gap: var(--space-1);
+  max-width: 100%;
+  min-width: 0;
   overflow-x: auto;
   padding: var(--space-1);
 }
@@ -51,6 +54,7 @@
 }
 
 .calculator-panel {
+  min-width: 0;
   padding: var(--space-5);
 }
 
@@ -58,6 +62,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
+  min-width: 0;
 }
 
 .calculator-tool-copy h3 {
@@ -95,12 +100,14 @@
   display: grid;
   gap: var(--space-5);
   grid-template-columns: minmax(17rem, 0.75fr) minmax(0, 1.25fr);
+  min-width: 0;
 }
 
 .calculator-controls-panel {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+  min-width: 0;
   padding: var(--space-5);
 }
 
@@ -108,6 +115,7 @@
   display: grid;
   gap: var(--space-4);
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 0;
 }
 
 .calculator-results-grid--four {
@@ -493,6 +501,7 @@
 .calculator-table-wrap {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
+  max-width: 100%;
   overflow-x: auto;
 }
 
@@ -627,21 +636,82 @@
 }
 
 @media (max-width: 640px) {
+  .calculator-page {
+    gap: var(--space-4);
+  }
+
+  .calculator-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow-x: visible;
+  }
+
+  .calculator-tabs button {
+    min-width: 0;
+    padding-inline: var(--space-2);
+    width: 100%;
+  }
+
   .calculator-panel,
   .calculator-controls-panel {
-    padding: var(--space-4);
+    border-radius: var(--radius-md);
+    padding: var(--space-3);
+  }
+
+  .calculator-tool {
+    gap: var(--space-4);
+  }
+
+  .calculator-tool-copy h3 {
+    font-size: var(--text-base);
+  }
+
+  .calculator-disclosure-note {
+    padding: var(--space-2);
   }
 
   .calculator-results-grid {
     grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+
+  .calculator-stat-card {
+    min-height: auto;
+    padding: var(--space-3);
   }
 
   .goal-plan-simulator-breakdown {
     grid-template-columns: 1fr;
   }
 
+  .goal-plan-simulator-copy,
+  .goal-plan-simulator-pack {
+    gap: var(--space-3);
+  }
+
+  .goal-plan-simulator-pack {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+
+  .goal-plan-simulator-pack span {
+    border-radius: var(--radius-md);
+    flex: 1 1 calc(50% - var(--space-2));
+    text-align: center;
+  }
+
+  .scenario-slider-label {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
   .field-tooltip-popover {
     left: 0;
     transform: none;
+  }
+
+  .calculator-table {
+    min-width: 32rem;
   }
 }

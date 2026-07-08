@@ -60,11 +60,12 @@ export const SHELL_NAV_ITEMS: ShellNavItem[] = [
     description: 'Financial tools',
     Icon: CalculatorIcon,
   },
-  {
-    to: '/dashboard/preferences',
-    label: 'Preferences',
-    mobileLabel: 'Prefs',
-    description: 'Guided setup',
-    Icon: PreferencesIcon,
-  },
 ];
+
+export const SHELL_PREFERENCES_ITEM: ShellNavItem = {
+  to: '/dashboard/preferences',
+  label: 'Preferences',
+  mobileLabel: 'Prefs',
+  description: 'Guided setup',
+  Icon: PreferencesIcon,
+};
