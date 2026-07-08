@@ -6,6 +6,7 @@ This note captures the pre-premium launch setup that remains outside normal app 
 
 ## Current Readiness Evidence
 
+- Exact Cloudflare cutover details are recorded in `docs/BudgetBuddyLIVE-Cloudflare-Cutover-2026-07-07.md`.
 - The linked Supabase project is on PostgreSQL 17.6, so the Postgres 14 end-of-support issue is not blocking this project.
 - Goal Pack migrations through `20260707193257_phase3_live_permission_hardening` are represented in the repo.
 - The linked Supabase project was hardened on 2026-07-07: current app tables and RPCs have no `anon` or `public` grants, app tables have RLS enabled, signed-in app RPCs are granted to `authenticated`, and `process_due_recurring_rules` is restricted to `service_role`.
@@ -19,11 +20,11 @@ This note captures the pre-premium launch setup that remains outside normal app 
 1. In Supabase Dashboard, keep automatic exposure of new tables/functions disabled or verify every new object gets explicit grants and RLS. Current launch objects were checked and hardened on 2026-07-07, but `supabase_admin` default privileges could not be changed through the MCP SQL role.
 2. Leaked password protection is currently unavailable on the project plan. Accepted pre-launch risk: proceed without it for the free pre-premium test release, require strong password guidance in product copy where practical, and re-enable this gate if/when the Supabase project moves to a plan that supports it.
 3. Treat current performance advisor `unused_index` info notices as expected on the young test database unless they persist after real usage.
-4. Set production Auth Site URL to the Cloudflare production domain.
+4. Set production Auth Site URL to the Cloudflare production domain: `https://budg.ca`.
 5. Add production Redirect URLs:
-   - `https://<production-domain>/auth/callback`
-   - `https://<production-domain>/signup/confirm-email`
-   - `https://<production-domain>/reset-password`
+   - `https://budg.ca/signup/confirm-email`
+   - `https://budg.ca/reset-password`
+   - Optional/future only: `https://budg.ca/auth/callback` if OAuth callback routing is added.
 6. Enable email confirmation only after the production confirm-email route is deployed.
 
 ## Resend Email Confirmation
@@ -55,17 +56,23 @@ For a single clean initial commit instead of preserving branch history, copy the
 
 1. Cloudflare Dashboard -> Workers & Pages -> Create application -> Pages -> Import from GitHub.
 2. Select the clean V2 deployment repo.
+   - Current deployment repo: `M0neyM1tch/BudgetBuddyLIVE`
+   - Production branch: `main`
 3. Build settings:
    - Build command: `npm run build`
    - Build output directory: `dist`
    - Root directory: repository root
 4. Environment variables:
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_PUBLISHABLE_KEY`
+   - `NODE_VERSION=22.13.0`
+   - `VITE_SUPABASE_URL=https://cebykmbauxbucvforwzj.supabase.co`
+   - `VITE_SUPABASE_PUBLISHABLE_KEY=<current Supabase publishable key>`
    - `VITE_GOAL_PACKS_ENABLED=true`
-5. Add custom domain in Pages -> Custom domains.
-6. If using an apex domain, the domain must be a Cloudflare zone with nameservers pointed to Cloudflare. If using a subdomain, add/confirm the CNAME to the Pages project.
-7. After Cloudflare deploys successfully, update Supabase Auth Site URL and Redirect URLs to the production domain.
+5. Supabase Edge Function environment:
+   - `APP_ENV=production`
+   - `ALLOWED_ORIGINS=https://budg.ca,https://www.budg.ca`
+6. Add custom domain in Pages -> Custom domains.
+7. If using an apex domain, the domain must be a Cloudflare zone with nameservers pointed to Cloudflare. If using a subdomain, add/confirm the CNAME to the Pages project.
+8. After Cloudflare deploys successfully, update Supabase Auth Site URL and Redirect URLs to the production domain.
 
 ## Phase 9 Start Gate
 
