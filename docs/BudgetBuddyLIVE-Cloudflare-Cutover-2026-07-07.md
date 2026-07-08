@@ -14,15 +14,19 @@ This note records the exact remaining production deployment work for moving the 
 - Supabase project ref: `cebykmbauxbucvforwzj`
 - Supabase URL: `https://cebykmbauxbucvforwzj.supabase.co`
 - Production domain target: `https://budg.ca`
+- V2 staging Pages project: `budgetbuddy-v2`
+- V2 staging URL: `https://budgetbuddy-v2.pages.dev`
+- V2 staging deployment: `a884b28b-33a4-436f-83a8-8137d1046639`
 - Vite build output: `dist`
 - SPA fallback exists: `public/_redirects` contains `/* /index.html 200`
 - Live Supabase app tables have RLS enabled.
 - Live Supabase app tables and public RPCs currently have no `anon` or `public` grants.
 - `process-recurring` Edge Function is deployed as version 3 with JWT verification enabled.
+- `APP_ENV=production` and `ALLOWED_ORIGINS` are set for the V2 Edge Function.
 
 ## Codex Cloudflare Access Check
 
-Codex can see local files, GitHub, and Supabase, but the current session does not expose a Cloudflare MCP/API tool. Wrangler is available through `npx`, but it is not authenticated:
+Codex can access Cloudflare through the Cloudflare API connector. Wrangler is available through `npx`, but the local Wrangler session is not authenticated:
 
 ```powershell
 npx --yes wrangler whoami
@@ -34,7 +38,28 @@ Result:
 You are not authenticated. Please run `wrangler login`.
 ```
 
-Because of that, Codex cannot yet directly update the existing Cloudflare Pages project, change its GitHub repository, move the custom domain, or export Cloudflare analytics from this shell. To let Codex perform the cutover directly, authenticate Wrangler in this environment with a Cloudflare account that can manage the Pages project and zone, or expose a Cloudflare API connector/token with Pages, DNS, and Analytics access.
+The Cloudflare API connector was used instead of Wrangler to create the V2 staging project. A direct live `budg.ca` cutover still requires explicit approval because it mutates the existing production Pages project.
+
+## V2 Staging Project Created
+
+Cloudflare Pages project `budgetbuddy-v2` was created on 2026-07-08.
+
+Verified configuration:
+
+- Project URL: `https://budgetbuddy-v2.pages.dev`
+- Source: `M0neyM1tch/BudgetBuddyLIVE`
+- Production branch: `main`
+- Build command: `npm run build`
+- Build output directory: `dist`
+- Production deployment commit: `d5489c484a7d192dd659408a225f867cfdf21778`
+- Deployment status: success
+- Routes verified with HTTP `200`:
+  - `https://budgetbuddy-v2.pages.dev`
+  - `https://budgetbuddy-v2.pages.dev/reset-password`
+  - `https://budgetbuddy-v2.pages.dev/signup/confirm-email`
+  - `https://budgetbuddy-v2.pages.dev/dashboard`
+
+The existing production project `budgetbuddy` remains unchanged and still serves `budg.ca` from the V1 repo until a live cutover is explicitly approved.
 
 ## Cloudflare Pages Repo Cutover
 
@@ -120,11 +145,11 @@ Supabase guidance: use exact redirect URLs in production. Wildcards are useful f
 
 ## Supabase Edge Function Environment
 
-Set these Edge Function secrets/environment variables for `process-recurring`:
+Current Edge Function secrets/environment variables for `process-recurring`:
 
 ```text
 APP_ENV=production
-ALLOWED_ORIGINS=https://budg.ca,https://www.budg.ca,https://<cloudflare-pages-project>.pages.dev,http://localhost:5173
+ALLOWED_ORIGINS=https://budg.ca,https://www.budg.ca,https://budgetbuddy-v2.pages.dev,http://localhost:5173
 ```
 
 Tighten `ALLOWED_ORIGINS` after testing:
@@ -134,6 +159,14 @@ ALLOWED_ORIGINS=https://budg.ca,https://www.budg.ca
 ```
 
 Keep `http://localhost:5173` only while local production-data testing is intentionally allowed. The deployed CORS helper throws in production if `ALLOWED_ORIGINS` is empty.
+
+Verified preflight:
+
+```text
+Origin: https://budgetbuddy-v2.pages.dev
+Access-Control-Allow-Origin: https://budgetbuddy-v2.pages.dev
+Status: 200
+```
 
 The function also requires Supabase service configuration. The deployed code supports the platform-provided `SUPABASE_SECRET_KEYS.default` path and the legacy `SUPABASE_SERVICE_ROLE_KEY` path. Do not expose either key to the frontend.
 

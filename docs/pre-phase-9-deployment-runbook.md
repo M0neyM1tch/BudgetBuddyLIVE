@@ -7,6 +7,7 @@ This note captures the pre-premium launch setup that remains outside normal app 
 ## Current Readiness Evidence
 
 - Exact Cloudflare cutover details are recorded in `docs/BudgetBuddyLIVE-Cloudflare-Cutover-2026-07-07.md`.
+- Cloudflare Pages staging project `budgetbuddy-v2` is deployed from `M0neyM1tch/BudgetBuddyLIVE` on `main` at `https://budgetbuddy-v2.pages.dev`.
 - The linked Supabase project is on PostgreSQL 17.6, so the Postgres 14 end-of-support issue is not blocking this project.
 - Goal Pack migrations through `20260707193257_phase3_live_permission_hardening` are represented in the repo.
 - The linked Supabase project was hardened on 2026-07-07: current app tables and RPCs have no `anon` or `public` grants, app tables have RLS enabled, signed-in app RPCs are granted to `authenticated`, and `process_due_recurring_rules` is restricted to `service_role`.
@@ -69,7 +70,7 @@ For a single clean initial commit instead of preserving branch history, copy the
    - `VITE_GOAL_PACKS_ENABLED=true`
 5. Supabase Edge Function environment:
    - `APP_ENV=production`
-   - `ALLOWED_ORIGINS=https://budg.ca,https://www.budg.ca`
+   - `ALLOWED_ORIGINS=https://budg.ca,https://www.budg.ca,https://budgetbuddy-v2.pages.dev,http://localhost:5173` during staging/local testing; tighten to production domains after cutover.
 6. Add custom domain in Pages -> Custom domains.
 7. If using an apex domain, the domain must be a Cloudflare zone with nameservers pointed to Cloudflare. If using a subdomain, add/confirm the CNAME to the Pages project.
 8. After Cloudflare deploys successfully, update Supabase Auth Site URL and Redirect URLs to the production domain.
