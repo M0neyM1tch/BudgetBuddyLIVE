@@ -18,8 +18,10 @@ This note records the production deployment work for moving the public BudgetBud
 - V2 staging URL: `https://budgetbuddy-v2.pages.dev`
 - V2 staging deployment: `a884b28b-33a4-436f-83a8-8137d1046639`
 - Live Pages project: `budgetbuddy`
-- Live production deployment: `07dc6044-3b58-4d9b-8bd2-06271f08d9bb`
-- Live production deployment commit: `4386d8c1b94661202d3fb40f464a7d975033f121`
+- Initial approved cutover deployment: `07dc6044-3b58-4d9b-8bd2-06271f08d9bb`
+- Initial approved cutover commit: `4386d8c1b94661202d3fb40f464a7d975033f121`
+- Latest verified production deployment: `f57f86ae-0591-470f-9ff9-62b5287debb1`
+- Latest verified production deployment commit: `de2f15175241ef6b5510966468ec1d636d2d48e8`
 - Live production deployment status: success
 - Live production aliases: `https://budg.ca`
 - Vite build output: `dist`
@@ -78,7 +80,8 @@ Verified live configuration:
 - Build command: `npm run build`
 - Build output directory: `dist`
 - Root directory: repository root
-- Production deployment ID: `07dc6044-3b58-4d9b-8bd2-06271f08d9bb`
+- Initial production deployment ID: `07dc6044-3b58-4d9b-8bd2-06271f08d9bb`
+- Latest verified production deployment ID: `f57f86ae-0591-470f-9ff9-62b5287debb1`
 - Production deployment status: success
 - Production alias: `https://budg.ca`
 

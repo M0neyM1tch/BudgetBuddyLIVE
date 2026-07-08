@@ -9,7 +9,8 @@ This note captures the pre-premium launch setup that remains outside normal app 
 - Exact Cloudflare cutover details are recorded in `docs/BudgetBuddyLIVE-Cloudflare-Cutover-2026-07-07.md`.
 - Cloudflare Pages staging project `budgetbuddy-v2` is deployed from `M0neyM1tch/BudgetBuddyLIVE` on `main` at `https://budgetbuddy-v2.pages.dev`.
 - Cloudflare Pages live project `budgetbuddy` now deploys from `M0neyM1tch/BudgetBuddyLIVE` on `main` and serves `https://budg.ca`.
-- Live production deployment `07dc6044-3b58-4d9b-8bd2-06271f08d9bb` completed successfully from commit `4386d8c1b94661202d3fb40f464a7d975033f121`.
+- Initial live cutover deployment `07dc6044-3b58-4d9b-8bd2-06271f08d9bb` completed successfully from commit `4386d8c1b94661202d3fb40f464a7d975033f121`.
+- Latest verified live production deployment `f57f86ae-0591-470f-9ff9-62b5287debb1` completed successfully from commit `de2f15175241ef6b5510966468ec1d636d2d48e8`.
 - Live routes verified with HTTP `200`: `/`, `/dashboard`, `/reset-password`, and `/signup/confirm-email`.
 - Live Cloudflare Pages production and preview env vars point to Supabase project `cebykmbauxbucvforwzj`; legacy V1 env vars were removed.
 - The linked Supabase project is on PostgreSQL 17.6, so the Postgres 14 end-of-support issue is not blocking this project.
