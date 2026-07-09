@@ -5,5 +5,5 @@ export {
   useDismissTooltip,
   useOnboardingPreferences,
   useResetOnboarding,
+  useResetOnboardingWithCleanSlate,
 } from './hooks/useOnboarding';
-

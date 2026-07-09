@@ -6,6 +6,7 @@ import {
   completeOnboarding,
   fetchOnboardingPreferences,
   resetOnboardingPreferences,
+  resetOnboardingWithCleanSlate,
   saveDismissedTooltips,
 } from '../api/onboarding.api';
 import type { OnboardingPreferences } from '../types/onboarding.types';
@@ -46,6 +47,19 @@ function getCachedPreferences(userId: string): OnboardingPreferences | undefined
   return queryClient.getQueryData<OnboardingPreferences>(onboardingKeys.preferences(userId));
 }
 
+async function invalidateWorkspaceSurfaces(userId: string) {
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: onboardingKeys.preferences(userId) }),
+    queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
+    queryClient.invalidateQueries({ queryKey: ['transactions'] }),
+    queryClient.invalidateQueries({ queryKey: ['analytics'] }),
+    queryClient.invalidateQueries({ queryKey: ['goals'] }),
+    queryClient.invalidateQueries({ queryKey: ['debts'] }),
+    queryClient.invalidateQueries({ queryKey: ['calculator'] }),
+    queryClient.invalidateQueries({ queryKey: ['goal-packs'] }),
+  ]);
+}
+
 export function useOnboardingPreferences() {
   const userId = useAuth().user?.id ?? null;
 
@@ -82,6 +96,22 @@ export function useResetOnboarding() {
     },
     onSuccess: (preferences) => {
       queryClient.setQueryData(onboardingKeys.preferences(preferences.user_id), preferences);
+    },
+  });
+}
+
+export function useResetOnboardingWithCleanSlate() {
+  const userId = useAuth().user?.id ?? null;
+
+  return useMutation({
+    mutationFn: () => {
+      if (!userId) throw new Error('You must be signed in to reset onboarding.');
+      writeLocalDismissedTooltips([]);
+      return resetOnboardingWithCleanSlate(userId);
+    },
+    onSuccess: async (preferences) => {
+      queryClient.setQueryData(onboardingKeys.preferences(preferences.user_id), preferences);
+      await invalidateWorkspaceSurfaces(preferences.user_id);
     },
   });
 }
