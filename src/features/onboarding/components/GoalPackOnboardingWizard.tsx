@@ -123,7 +123,7 @@ const ADVANCED_INCOME_SPLITS = [
     helper: 'Side income, support payments, or other regular money in.',
     key: 'other_income',
     kind: 'income',
-    label: 'Other income',
+    label: 'Other',
     placeholder: '300.00',
   },
 ] as const satisfies readonly AdvancedRecurringSplitDefinition[];
