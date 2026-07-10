@@ -15,12 +15,13 @@ import {
 } from 'lucide-react';
 import { Button } from '../../../shared/components/ui/Button';
 import { Modal } from '../../../shared/components/ui/Modal';
-import { displayToCents } from '../../../shared/utils/currency';
+import { centsToDisplay, displayToCents } from '../../../shared/utils/currency';
 import { today } from '../../../shared/utils/dates';
 import {
   useCreateGoalPackOnboardingSetup,
   useRecalculateGoalPlan,
 } from '../../goalPacks';
+import { getCategoryLabel } from '../../transactions/constants/categories';
 import {
   useCreateRecurringRule,
   useProcessRecurringRules,
@@ -48,12 +49,27 @@ type PriorityOption = {
 };
 
 type SmartSetupForm = {
+  advancedExpenseAmounts: Record<AdvancedExpenseSplitKey, string>;
+  advancedIncomeAmounts: Record<AdvancedIncomeSplitKey, string>;
   createRecurringExpenseRule: boolean;
   createRecurringIncomeRule: boolean;
+  recurringSetupMode: RecurringSetupMode;
   recurringStartDate: string;
 };
 
 type OnboardingForm = GoalPackOnboardingDraft & SmartSetupForm;
+
+type RecurringSetupMode = 'quick' | 'advanced';
+
+type AdvancedRecurringSplitDefinition<Key extends string = string> = {
+  category: string;
+  description: string;
+  helper: string;
+  key: Key;
+  kind: Extract<RecurringRuleDraft['kind'], 'income' | 'expense'>;
+  label: string;
+  placeholder: string;
+};
 
 const PRIORITY_OPTIONS: PriorityOption[] = [
   {
@@ -82,8 +98,109 @@ const PRIORITY_OPTIONS: PriorityOption[] = [
   },
 ];
 
+const ADVANCED_INCOME_SPLITS = [
+  {
+    category: 'pay',
+    description: 'Pay',
+    helper: 'Salary, wages, or regular take-home pay.',
+    key: 'pay',
+    kind: 'income',
+    label: 'Pay',
+    placeholder: '5200.00',
+  },
+  {
+    category: 'investment',
+    description: 'Savings and investment income',
+    helper: 'Recurring interest, dividends, or planned investment income.',
+    key: 'savings_investments',
+    kind: 'income',
+    label: 'Savings/investments',
+    placeholder: '150.00',
+  },
+  {
+    category: 'pay',
+    description: 'Other income',
+    helper: 'Side income, support payments, or other regular money in.',
+    key: 'other_income',
+    kind: 'income',
+    label: 'Other income',
+    placeholder: '300.00',
+  },
+] as const satisfies readonly AdvancedRecurringSplitDefinition[];
+
+const ADVANCED_EXPENSE_SPLITS = [
+  {
+    category: 'housing',
+    description: 'Rent/housing',
+    helper: 'Rent, mortgage, condo fees, or core housing costs.',
+    key: 'housing',
+    kind: 'expense',
+    label: 'Rent/housing',
+    placeholder: '1800.00',
+  },
+  {
+    category: 'food',
+    description: 'Food/groceries',
+    helper: 'Groceries, recurring meal spend, or food basics.',
+    key: 'food',
+    kind: 'expense',
+    label: 'Food/groceries',
+    placeholder: '650.00',
+  },
+  {
+    category: 'transportation',
+    description: 'Transportation',
+    helper: 'Transit, fuel, insurance, parking, or car payments.',
+    key: 'transportation',
+    kind: 'expense',
+    label: 'Transportation',
+    placeholder: '350.00',
+  },
+  {
+    category: 'subscriptions',
+    description: 'Subscriptions/bills',
+    helper: 'Phone, utilities, software, streaming, or recurring bills.',
+    key: 'subscriptions',
+    kind: 'expense',
+    label: 'Subscriptions/bills',
+    placeholder: '250.00',
+  },
+  {
+    category: 'debt_payment',
+    description: 'Debt payments',
+    helper: 'Minimum payments or planned recurring debt payments.',
+    key: 'debt_payment',
+    kind: 'expense',
+    label: 'Debt payments',
+    placeholder: '300.00',
+  },
+] as const satisfies readonly AdvancedRecurringSplitDefinition[];
+
+type AdvancedIncomeSplitKey = (typeof ADVANCED_INCOME_SPLITS)[number]['key'];
+type AdvancedExpenseSplitKey = (typeof ADVANCED_EXPENSE_SPLITS)[number]['key'];
+
+function createEmptyAdvancedIncomeAmounts(): Record<AdvancedIncomeSplitKey, string> {
+  return {
+    other_income: '',
+    pay: '',
+    savings_investments: '',
+  };
+}
+
+function createEmptyAdvancedExpenseAmounts(): Record<AdvancedExpenseSplitKey, string> {
+  return {
+    debt_payment: '',
+    food: '',
+    housing: '',
+    subscriptions: '',
+    transportation: '',
+  };
+}
+
 function createDefaultForm(): OnboardingForm {
   return {
+    advancedExpenseAmounts: createEmptyAdvancedExpenseAmounts(),
+    advancedIncomeAmounts: createEmptyAdvancedIncomeAmounts(),
     age: '',
     countryCode: 'CA',
     createRecurringExpenseRule: false,
@@ -99,6 +216,7 @@ function createDefaultForm(): OnboardingForm {
     monthlyExpenses: '',
     monthlyIncome: '',
     priorityType: 'emergency_fund',
+    recurringSetupMode: 'quick',
     recurringStartDate: today(),
     regionCode: '',
     targetAmount: '',
@@ -131,42 +249,94 @@ function dayOfMonth(isoDate: string): number | null {
   return Number.isInteger(day) && day >= 1 && day <= 31 ? day : null;
 }
 
+function positiveInteger(value: string): number | null {
+  if (!value.trim()) return null;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function createRecurringRuleDraft(
+  split: Pick<AdvancedRecurringSplitDefinition, 'category' | 'description' | 'kind'>,
+  amountCents: number,
+  startDate: string,
+): RecurringRuleDraft {
+  return {
+    amount_cents: amountCents,
+    category: split.category,
+    day_of_month: dayOfMonth(startDate),
+    description: split.description,
+    frequency: 'monthly',
+    is_active: true,
+    kind: split.kind,
+    next_run_date: startDate,
+    notes: 'Created during priority setup.',
+    skip_backdate: false,
+    start_date: startDate,
+  };
+}
+
+function pushAdvancedRecurringRules<Key extends string>(
+  rules: RecurringRuleDraft[],
+  startDate: string,
+  definitions: readonly AdvancedRecurringSplitDefinition<Key>[],
+  amounts: Record<Key, string>,
+) {
+  definitions.forEach((definition) => {
+    const amountCents = positiveCents(amounts[definition.key]);
+    if (!amountCents) return;
+
+    rules.push(createRecurringRuleDraft(definition, amountCents, startDate));
+  });
+}
+
 function recurringRulesForForm(form: OnboardingForm): RecurringRuleDraft[] {
   const startDate = form.recurringStartDate || today();
   const rules: RecurringRuleDraft[] = [];
   const monthlyIncomeCents = positiveCents(form.monthlyIncome);
   const monthlyExpenseCents = positiveCents(form.monthlyExpenses);
 
+  if (form.recurringSetupMode === 'advanced') {
+    pushAdvancedRecurringRules(
+      rules,
+      startDate,
+      ADVANCED_INCOME_SPLITS,
+      form.advancedIncomeAmounts,
+    );
+    pushAdvancedRecurringRules(
+      rules,
+      startDate,
+      ADVANCED_EXPENSE_SPLITS,
+      form.advancedExpenseAmounts,
+    );
+    return rules;
+  }
+
   if (form.createRecurringIncomeRule && monthlyIncomeCents) {
-    rules.push({
-      amount_cents: monthlyIncomeCents,
-      category: 'pay',
-      day_of_month: dayOfMonth(startDate),
-      description: 'Monthly income',
-      frequency: 'monthly',
-      is_active: true,
-      kind: 'income',
-      next_run_date: startDate,
-      notes: 'Created during priority setup.',
-      skip_backdate: false,
-      start_date: startDate,
-    });
+    rules.push(
+      createRecurringRuleDraft(
+        {
+          category: 'pay',
+          description: 'Monthly income',
+          kind: 'income',
+        },
+        monthlyIncomeCents,
+        startDate,
+      ),
+    );
   }
 
   if (form.createRecurringExpenseRule && monthlyExpenseCents) {
-    rules.push({
-      amount_cents: monthlyExpenseCents,
-      category: 'housing',
-      day_of_month: dayOfMonth(startDate),
-      description: 'Monthly essential bills',
-      frequency: 'monthly',
-      is_active: true,
-      kind: 'expense',
-      next_run_date: startDate,
-      notes: 'Created during priority setup.',
-      skip_backdate: false,
-      start_date: startDate,
-    });
+    rules.push(
+      createRecurringRuleDraft(
+        {
+          category: 'housing',
+          description: 'Monthly essential bills',
+          kind: 'expense',
+        },
+        monthlyExpenseCents,
+        startDate,
+      ),
+    );
   }
 
   return rules;
@@ -184,6 +354,51 @@ function recurringRuleMatches(rule: RecurringRule, draft: RecurringRuleDraft) {
   );
 }
 
+function targetAmountForReview(form: OnboardingForm): number | null {
+  if (form.priorityType === 'emergency_fund') {
+    const essentialsCents = positiveCents(form.monthlyEssentialExpenses);
+    const targetMonths = positiveInteger(form.targetMonths);
+    return essentialsCents && targetMonths ? essentialsCents * targetMonths : null;
+  }
+
+  if (form.priorityType === 'debt_payoff') {
+    return positiveCents(form.debtBalance);
+  }
+
+  return positiveCents(form.targetAmount);
+}
+
+function currentAmountForReview(form: OnboardingForm): number | null {
+  if (form.priorityType === 'debt_payoff') return 0;
+  return positiveCents(form.currentAmount) ?? 0;
+}
+
+function monthlyContributionForReview(form: OnboardingForm): number | null {
+  if (form.priorityType === 'debt_payoff') return positiveCents(form.debtMinimumPayment);
+  return positiveCents(form.monthlyCommitment);
+}
+
+function currencyOrUnset(cents: number | null): string {
+  return cents === null ? 'Not set yet' : centsToDisplay(cents);
+}
+
+function progressForReview(currentCents: number | null, targetCents: number | null): string {
+  if (currentCents === null || !targetCents) return 'Needs target';
+  return `${Math.min(100, Math.round((currentCents / targetCents) * 100))}%`;
+}
+
+function dashboardCardsForPriority(type: PriorityGoalType): string[] {
+  if (type === 'debt_payoff') {
+    return ['Active debt focus', 'Debt-free date', 'Interest pressure', 'Next payoff action'];
+  }
+
+  if (type === 'emergency_fund') {
+    return ['Buffer progress', 'Months covered', 'Monthly gap', 'Next savings action'];
+  }
+
+  return ['Active goal', 'Progress percent', 'Target date', 'Next contribution action'];
+}
+
 export function GoalPackOnboardingWizard({ isOpen }: GoalPackOnboardingWizardProps) {
   const navigate = useNavigate();
   const completeMutation = useCompleteOnboarding();
@@ -196,8 +411,8 @@ export function GoalPackOnboardingWizard({ isOpen }: GoalPackOnboardingWizardPro
   const [stepIndex, setStepIndex] = useState(0);
   const [form, setForm] = useState<OnboardingForm>(() => createDefaultForm());
   const [clientError, setClientError] = useState<string | null>(null);
-  const isLastStep = stepIndex === 3;
-  const totalSteps = 4;
+  const isLastStep = stepIndex === 4;
+  const totalSteps = 5;
   const isSubmitting =
     completeMutation.isPending ||
     createOnboardingSetupMutation.isPending ||
@@ -205,12 +420,64 @@ export function GoalPackOnboardingWizard({ isOpen }: GoalPackOnboardingWizardPro
     processRecurringRulesMutation.isPending ||
     recalculateGoalPlanMutation.isPending;
 
-  function updateField<Key extends keyof OnboardingForm>(
-    key: Key,
-    value: OnboardingForm[Key],
-  ) {
+  function updateField<Key extends keyof OnboardingForm>(key: Key, value: OnboardingForm[Key]) {
     setClientError(null);
     setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function updateAdvancedIncomeAmount(key: AdvancedIncomeSplitKey, value: string) {
+    setClientError(null);
+    setForm((current) => ({
+      ...current,
+      advancedIncomeAmounts: {
+        ...current.advancedIncomeAmounts,
+        [key]: value,
+      },
+    }));
+  }
+
+  function updateAdvancedExpenseAmount(key: AdvancedExpenseSplitKey, value: string) {
+    setClientError(null);
+    setForm((current) => ({
+      ...current,
+      advancedExpenseAmounts: {
+        ...current.advancedExpenseAmounts,
+        [key]: value,
+      },
+    }));
+  }
+
+  function updateRecurringSetupMode(mode: RecurringSetupMode) {
+    setClientError(null);
+    setForm((current) => {
+      if (mode === 'quick') {
+        return { ...current, recurringSetupMode: mode };
+      }
+
+      const shouldSeedIncome = !Object.values(current.advancedIncomeAmounts).some((value) =>
+        value.trim(),
+      );
+      const shouldSeedExpenses = !Object.values(current.advancedExpenseAmounts).some((value) =>
+        value.trim(),
+      );
+
+      return {
+        ...current,
+        advancedExpenseAmounts: shouldSeedExpenses
+          ? {
+              ...current.advancedExpenseAmounts,
+              housing: current.monthlyExpenses,
+            }
+          : current.advancedExpenseAmounts,
+        advancedIncomeAmounts: shouldSeedIncome
+          ? {
+              ...current.advancedIncomeAmounts,
+              pay: current.monthlyIncome,
+            }
+          : current.advancedIncomeAmounts,
+        recurringSetupMode: mode,
+      };
+    });
   }
 
   async function completeWithoutPlan() {
@@ -234,7 +501,8 @@ export function GoalPackOnboardingWizard({ isOpen }: GoalPackOnboardingWizardPro
     const drafts = recurringRulesForForm(form);
     if (drafts.length === 0) return false;
 
-    const refetchedRules = recurringRulesQuery.data ?? (await recurringRulesQuery.refetch()).data ?? [];
+    const refetchedRules =
+      recurringRulesQuery.data ?? (await recurringRulesQuery.refetch()).data ?? [];
     const knownRules = [...refetchedRules];
     const shouldBackdate = drafts.some((draft) => draft.start_date <= today());
 
@@ -289,6 +557,12 @@ export function GoalPackOnboardingWizard({ isOpen }: GoalPackOnboardingWizardPro
   }
 
   const selectedPriority = priorityTitle(form.priorityType);
+  const reviewGoalName = form.goalName.trim() || selectedPriority;
+  const reviewRecurringRules = recurringRulesForForm(form);
+  const reviewTargetCents = targetAmountForReview(form);
+  const reviewCurrentCents = currentAmountForReview(form);
+  const reviewContributionCents = monthlyContributionForReview(form);
+  const reviewCards = dashboardCardsForPriority(form.priorityType);
 
   return (
     <Modal
@@ -340,10 +614,17 @@ export function GoalPackOnboardingWizard({ isOpen }: GoalPackOnboardingWizardPro
           {stepIndex === 1 ? <Sparkles size={28} /> : null}
           {stepIndex === 2 ? <Target size={28} /> : null}
           {stepIndex === 3 ? <Repeat2 size={28} /> : null}
+          {stepIndex === 4 ? <Check size={28} /> : null}
         </div>
 
         {stepIndex === 0 ? (
-          <OnboardingStep eyebrow="Your cash flow" title="Add the monthly baseline">
+          <OnboardingStep
+            eyebrow="Your cash flow"
+            title="Your Cash Flow: how much you make and spend every month"
+          >
+            <p className="priority-step-why">
+              This lets BudgetBuddy estimate your monthly gap before it builds a plan.
+            </p>
             <div className="priority-form-grid">
               <label className="priority-form-field">
                 <span>Monthly income</span>
@@ -367,23 +648,24 @@ export function GoalPackOnboardingWizard({ isOpen }: GoalPackOnboardingWizardPro
               </label>
             </div>
             <p className="priority-form-note">
-              These numbers let BudgetBuddy estimate monthly capacity. You can optionally turn
-              them into recurring rules before finishing setup.
+              These numbers let BudgetBuddy estimate monthly capacity. You can optionally turn them
+              into recurring rules before finishing setup.
             </p>
           </OnboardingStep>
         ) : null}
 
         {stepIndex === 1 ? (
           <OnboardingStep eyebrow="Top priority" title="Choose the first plan">
+            <p className="priority-step-why">
+              This tells BudgetBuddy which financial outcome to optimize first.
+            </p>
             <div className="priority-option-grid">
               {PRIORITY_OPTIONS.map(({ body, Icon, label, type }) => (
                 <button
                   key={type}
                   type="button"
                   className={
-                    form.priorityType === type
-                      ? 'priority-option is-selected'
-                      : 'priority-option'
+                    form.priorityType === type ? 'priority-option is-selected' : 'priority-option'
                   }
                   aria-pressed={form.priorityType === type}
                   onClick={() => updateField('priorityType', type)}
@@ -399,6 +681,9 @@ export function GoalPackOnboardingWizard({ isOpen }: GoalPackOnboardingWizardPro
 
         {stepIndex === 2 ? (
           <OnboardingStep eyebrow={selectedPriority} title="Create the starter goal">
+            <p className="priority-step-why">
+              This turns the priority into a target, date, and monthly pace.
+            </p>
             <div className="priority-form-grid">
               <label className="priority-form-field priority-form-field--wide">
                 <span>Goal name</span>
@@ -536,8 +821,8 @@ export function GoalPackOnboardingWizard({ isOpen }: GoalPackOnboardingWizardPro
             </div>
 
             <p className="priority-form-note">
-              The starter plan is an educational scenario based on what you enter here. It does
-              not provide financial, tax, mortgage, legal, debt-relief, or investment advice.
+              The starter plan is an educational scenario based on what you enter here. It does not
+              provide financial, tax, mortgage, legal, debt-relief, or investment advice.
             </p>
 
             {clientError ? (
@@ -549,64 +834,230 @@ export function GoalPackOnboardingWizard({ isOpen }: GoalPackOnboardingWizardPro
         ) : null}
 
         {stepIndex === 3 ? (
-          <OnboardingStep eyebrow="Optional setup" title="Make the plan smarter">
+          <OnboardingStep eyebrow="Optional setup" title="Set up monthly money entries">
+            <p className="priority-step-why">
+              This gives your plan real income and expense entries to analyze.
+            </p>
+
+            <div className="recurring-mode-toggle" role="group" aria-label="Recurring setup depth">
+              <button
+                type="button"
+                className={
+                  form.recurringSetupMode === 'quick'
+                    ? 'recurring-mode-option is-selected'
+                    : 'recurring-mode-option'
+                }
+                aria-pressed={form.recurringSetupMode === 'quick'}
+                onClick={() => updateRecurringSetupMode('quick')}
+              >
+                <strong>Skip advanced (recommended)</strong>
+                <small>Use one income rule and one monthly bills rule.</small>
+              </button>
+              <button
+                type="button"
+                className={
+                  form.recurringSetupMode === 'advanced'
+                    ? 'recurring-mode-option is-selected'
+                    : 'recurring-mode-option'
+                }
+                aria-pressed={form.recurringSetupMode === 'advanced'}
+                onClick={() => updateRecurringSetupMode('advanced')}
+              >
+                <strong>Proceed with advanced split</strong>
+                <small>Break income and expenses into clearer categories.</small>
+              </button>
+            </div>
+
             <div className="priority-form-grid">
               <label className="priority-form-field priority-form-field--wide">
-                <span>First recurring date</span>
+                <span>First Occurrence</span>
                 <input
                   type="date"
                   value={form.recurringStartDate}
                   onInput={(event) => updateField('recurringStartDate', event.currentTarget.value)}
                   onChange={(event) => updateField('recurringStartDate', event.currentTarget.value)}
                 />
+                <small>
+                  Set this date prior to today to backdate monthly income and expenses so you have
+                  previous transactions to analyze.
+                </small>
               </label>
 
-              <label
-                className={
-                  positiveCents(form.monthlyIncome)
-                    ? 'priority-checkbox-card'
-                    : 'priority-checkbox-card is-disabled'
-                }
-              >
-                <input
-                  type="checkbox"
-                  checked={form.createRecurringIncomeRule}
-                  disabled={!positiveCents(form.monthlyIncome)}
-                  onChange={(event) =>
-                    updateField('createRecurringIncomeRule', event.target.checked)
-                  }
-                />
-                <span>
-                  <strong>Track monthly income</strong>
-                  <small>Create a monthly pay rule from the income baseline.</small>
-                </span>
-              </label>
+              {form.recurringSetupMode === 'quick' ? (
+                <>
+                  <label
+                    className={
+                      positiveCents(form.monthlyIncome)
+                        ? 'priority-checkbox-card'
+                        : 'priority-checkbox-card is-disabled'
+                    }
+                  >
+                    <input
+                      type="checkbox"
+                      checked={form.createRecurringIncomeRule}
+                      disabled={!positiveCents(form.monthlyIncome)}
+                      onChange={(event) =>
+                        updateField('createRecurringIncomeRule', event.target.checked)
+                      }
+                    />
+                    <span>
+                      <strong>Track monthly income</strong>
+                      <small>Create a monthly pay rule from the income baseline.</small>
+                    </span>
+                  </label>
 
-              <label
-                className={
-                  positiveCents(form.monthlyExpenses)
-                    ? 'priority-checkbox-card'
-                    : 'priority-checkbox-card is-disabled'
-                }
-              >
-                <input
-                  type="checkbox"
-                  checked={form.createRecurringExpenseRule}
-                  disabled={!positiveCents(form.monthlyExpenses)}
-                  onChange={(event) =>
-                    updateField('createRecurringExpenseRule', event.target.checked)
-                  }
-                />
-                <span>
-                  <strong>Track monthly bills</strong>
-                  <small>Create a monthly essential-bills rule from the expense baseline.</small>
-                </span>
-              </label>
+                  <label
+                    className={
+                      positiveCents(form.monthlyExpenses)
+                        ? 'priority-checkbox-card'
+                        : 'priority-checkbox-card is-disabled'
+                    }
+                  >
+                    <input
+                      type="checkbox"
+                      checked={form.createRecurringExpenseRule}
+                      disabled={!positiveCents(form.monthlyExpenses)}
+                      onChange={(event) =>
+                        updateField('createRecurringExpenseRule', event.target.checked)
+                      }
+                    />
+                    <span>
+                      <strong>Track monthly bills</strong>
+                      <small>
+                        Create one monthly essential-bills rule from the expense baseline.
+                      </small>
+                    </span>
+                  </label>
+                </>
+              ) : null}
+            </div>
+
+            {form.recurringSetupMode === 'advanced' ? (
+              <div className="recurring-split-layout">
+                <div className="recurring-split-group">
+                  <h4>Income</h4>
+                  <div className="recurring-split-list">
+                    {ADVANCED_INCOME_SPLITS.map((split) => (
+                      <label className="recurring-split-row" key={split.key}>
+                        <span>
+                          <strong>{split.label}</strong>
+                          <small>{split.helper}</small>
+                        </span>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          placeholder={split.placeholder}
+                          value={form.advancedIncomeAmounts[split.key]}
+                          onChange={(event) =>
+                            updateAdvancedIncomeAmount(split.key, event.target.value)
+                          }
+                        />
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="recurring-split-group">
+                  <h4>Expenses</h4>
+                  <div className="recurring-split-list">
+                    {ADVANCED_EXPENSE_SPLITS.map((split) => (
+                      <label className="recurring-split-row" key={split.key}>
+                        <span>
+                          <strong>{split.label}</strong>
+                          <small>{split.helper}</small>
+                        </span>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          placeholder={split.placeholder}
+                          value={form.advancedExpenseAmounts[split.key]}
+                          onChange={(event) =>
+                            updateAdvancedExpenseAmount(split.key, event.target.value)
+                          }
+                        />
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            <p className="priority-form-note">
+              Recurring rules live in Transactions and can be edited or deleted any time. Leave an
+              advanced row blank to skip it, or keep the recommended quick setup for a faster start.
+            </p>
+
+            {clientError ? (
+              <p className="priority-form-error" role="alert">
+                {clientError}
+              </p>
+            ) : null}
+          </OnboardingStep>
+        ) : null}
+
+        {stepIndex === 4 ? (
+          <OnboardingStep eyebrow="Review" title="Review the plan before it is created">
+            <p className="priority-step-why">
+              This confirms what BudgetBuddy will create before anything is saved.
+            </p>
+
+            <div className="onboarding-review-grid">
+              <article>
+                <span>Active priority</span>
+                <strong>{selectedPriority}</strong>
+                <small>{reviewGoalName}</small>
+              </article>
+              <article>
+                <span>Goal amount</span>
+                <strong>{currencyOrUnset(reviewTargetCents)}</strong>
+                <small>{progressForReview(reviewCurrentCents, reviewTargetCents)} funded</small>
+              </article>
+              <article>
+                <span>Monthly pace</span>
+                <strong>{currencyOrUnset(reviewContributionCents)}</strong>
+                <small>
+                  {form.targetDate ? `Target date: ${form.targetDate}` : 'No target date yet'}
+                </small>
+              </article>
+            </div>
+
+            <div className="onboarding-review-section">
+              <h4>Recurring entries to create</h4>
+              {reviewRecurringRules.length ? (
+                <ul>
+                  {reviewRecurringRules.map((rule) => (
+                    <li key={`${rule.kind}-${rule.category}-${rule.description}`}>
+                      <span>
+                        {rule.kind === 'income' ? 'Income' : 'Expense'} -{' '}
+                        {getCategoryLabel(rule.category)}
+                      </span>
+                      <strong>{centsToDisplay(rule.amount_cents)}</strong>
+                      <small>
+                        {rule.description}, monthly from {rule.start_date}
+                      </small>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p>No recurring entries selected. The starter plan will stay manual for now.</p>
+              )}
+            </div>
+
+            <div className="onboarding-review-section">
+              <h4>Dashboard cards you will see</h4>
+              <ul>
+                {reviewCards.map((card) => (
+                  <li key={card}>
+                    <span>{card}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
 
             <p className="priority-form-note">
-              Recurring rules live in Transactions and can be edited or deleted any time. Skipping
-              this keeps the starter plan manual.
+              After setup, start with Dashboard, then review Transactions, then open Analytics once
+              transactions exist. BudgetBuddy will use those entries to turn your priority into next
+              actions and progress momentum.
             </p>
 
             {clientError ? (
