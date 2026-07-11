@@ -17,17 +17,17 @@ import { Button } from '../../../shared/components/ui/Button';
 import { Modal } from '../../../shared/components/ui/Modal';
 import { centsToDisplay, displayToCents } from '../../../shared/utils/currency';
 import { today } from '../../../shared/utils/dates';
-import {
-  useCreateGoalPackOnboardingSetup,
-  useRecalculateGoalPlan,
-} from '../../goalPacks';
-import { getCategoryLabel } from '../../transactions/constants/categories';
+import { useCreateGoalPackOnboardingSetup, useRecalculateGoalPlan } from '../../goalPacks';
+import { getCategoryLabel, TRANSACTION_CATEGORIES } from '../../transactions/constants/categories';
 import {
   useCreateRecurringRule,
   useProcessRecurringRules,
   useRecurringRules,
 } from '../../transactions/hooks/useTransactions';
-import type { RecurringRule, RecurringRuleDraft } from '../../transactions/types/transactions.types';
+import type {
+  RecurringRule,
+  RecurringRuleDraft,
+} from '../../transactions/types/transactions.types';
 import { useCompleteOnboarding } from '../hooks/useOnboarding';
 import { OnboardingProgress } from './OnboardingProgress';
 import { OnboardingStep } from './OnboardingStep';
@@ -61,12 +61,27 @@ type OnboardingForm = GoalPackOnboardingDraft & SmartSetupForm;
 
 type RecurringSetupMode = 'quick' | 'advanced';
 
+type EditableRecurringKind = Extract<RecurringRuleDraft['kind'], 'income' | 'expense'>;
+
+type GeneratedRecurringRule = {
+  draft: RecurringRuleDraft;
+  key: string;
+  label: string;
+};
+
+type RecurringRuleReviewEdit = {
+  amount: string;
+  category: string;
+  description: string;
+  startDate: string;
+};
+
 type AdvancedRecurringSplitDefinition<Key extends string = string> = {
   category: string;
   description: string;
   helper: string;
   key: Key;
-  kind: Extract<RecurringRuleDraft['kind'], 'income' | 'expense'>;
+  kind: EditableRecurringKind;
   label: string;
   placeholder: string;
 };
@@ -276,7 +291,7 @@ function createRecurringRuleDraft(
 }
 
 function pushAdvancedRecurringRules<Key extends string>(
-  rules: RecurringRuleDraft[],
+  rules: GeneratedRecurringRule[],
   startDate: string,
   definitions: readonly AdvancedRecurringSplitDefinition<Key>[],
   amounts: Record<Key, string>,
@@ -285,13 +300,17 @@ function pushAdvancedRecurringRules<Key extends string>(
     const amountCents = positiveCents(amounts[definition.key]);
     if (!amountCents) return;
 
-    rules.push(createRecurringRuleDraft(definition, amountCents, startDate));
+    rules.push({
+      draft: createRecurringRuleDraft(definition, amountCents, startDate),
+      key: `advanced-${definition.kind}-${definition.key}`,
+      label: definition.label,
+    });
   });
 }
 
-function recurringRulesForForm(form: OnboardingForm): RecurringRuleDraft[] {
+function generatedRecurringRulesForForm(form: OnboardingForm): GeneratedRecurringRule[] {
   const startDate = form.recurringStartDate || today();
-  const rules: RecurringRuleDraft[] = [];
+  const rules: GeneratedRecurringRule[] = [];
   const monthlyIncomeCents = positiveCents(form.monthlyIncome);
   const monthlyExpenseCents = positiveCents(form.monthlyExpenses);
 
@@ -312,8 +331,8 @@ function recurringRulesForForm(form: OnboardingForm): RecurringRuleDraft[] {
   }
 
   if (form.createRecurringIncomeRule && monthlyIncomeCents) {
-    rules.push(
-      createRecurringRuleDraft(
+    rules.push({
+      draft: createRecurringRuleDraft(
         {
           category: 'pay',
           description: 'Monthly income',
@@ -322,12 +341,14 @@ function recurringRulesForForm(form: OnboardingForm): RecurringRuleDraft[] {
         monthlyIncomeCents,
         startDate,
       ),
-    );
+      key: 'quick-income',
+      label: 'Monthly income',
+    });
   }
 
   if (form.createRecurringExpenseRule && monthlyExpenseCents) {
-    rules.push(
-      createRecurringRuleDraft(
+    rules.push({
+      draft: createRecurringRuleDraft(
         {
           category: 'housing',
           description: 'Monthly essential bills',
@@ -336,10 +357,56 @@ function recurringRulesForForm(form: OnboardingForm): RecurringRuleDraft[] {
         monthlyExpenseCents,
         startDate,
       ),
-    );
+      key: 'quick-expense',
+      label: 'Monthly bills',
+    });
   }
 
   return rules;
+}
+
+function centsToInputValue(cents: number): string {
+  return (cents / 100).toFixed(2);
+}
+
+function reviewEditForRule(
+  rule: GeneratedRecurringRule,
+  edits: Record<string, RecurringRuleReviewEdit>,
+): RecurringRuleReviewEdit {
+  return (
+    edits[rule.key] ?? {
+      amount: centsToInputValue(rule.draft.amount_cents),
+      category: rule.draft.category,
+      description: rule.draft.description,
+      startDate: rule.draft.start_date,
+    }
+  );
+}
+
+function applyReviewEditToRule(
+  rule: GeneratedRecurringRule,
+  edits: Record<string, RecurringRuleReviewEdit>,
+): RecurringRuleDraft {
+  const edit = reviewEditForRule(rule, edits);
+  const amountCents = positiveCents(edit.amount) ?? rule.draft.amount_cents;
+  const startDate = edit.startDate || rule.draft.start_date;
+
+  return {
+    ...rule.draft,
+    amount_cents: amountCents,
+    category: edit.category || rule.draft.category,
+    day_of_month: dayOfMonth(startDate),
+    description: edit.description.trim() || rule.draft.description,
+    next_run_date: startDate,
+    start_date: startDate,
+  };
+}
+
+function recurringRulesForForm(
+  form: OnboardingForm,
+  edits: Record<string, RecurringRuleReviewEdit> = {},
+): RecurringRuleDraft[] {
+  return generatedRecurringRulesForForm(form).map((rule) => applyReviewEditToRule(rule, edits));
 }
 
 function recurringRuleMatches(rule: RecurringRule, draft: RecurringRuleDraft) {
@@ -411,6 +478,9 @@ export function GoalPackOnboardingWizard({ isOpen }: GoalPackOnboardingWizardPro
   const [stepIndex, setStepIndex] = useState(0);
   const [form, setForm] = useState<OnboardingForm>(() => createDefaultForm());
   const [clientError, setClientError] = useState<string | null>(null);
+  const [recurringRuleEdits, setRecurringRuleEdits] = useState<
+    Record<string, RecurringRuleReviewEdit>
+  >({});
   const isLastStep = stepIndex === 4;
   const totalSteps = 5;
   const isSubmitting =
@@ -449,6 +519,7 @@ export function GoalPackOnboardingWizard({ isOpen }: GoalPackOnboardingWizardPro
 
   function updateRecurringSetupMode(mode: RecurringSetupMode) {
     setClientError(null);
+    setRecurringRuleEdits({});
     setForm((current) => {
       if (mode === 'quick') {
         return { ...current, recurringSetupMode: mode };
@@ -480,6 +551,21 @@ export function GoalPackOnboardingWizard({ isOpen }: GoalPackOnboardingWizardPro
     });
   }
 
+  function updateRecurringRuleEdit(
+    rule: GeneratedRecurringRule,
+    key: keyof RecurringRuleReviewEdit,
+    value: string,
+  ) {
+    setClientError(null);
+    setRecurringRuleEdits((current) => ({
+      ...current,
+      [rule.key]: {
+        ...reviewEditForRule(rule, current),
+        [key]: value,
+      },
+    }));
+  }
+
   async function completeWithoutPlan() {
     await completeMutation.mutateAsync();
   }
@@ -498,7 +584,7 @@ export function GoalPackOnboardingWizard({ isOpen }: GoalPackOnboardingWizardPro
   }
 
   async function createSelectedRecurringRules(): Promise<boolean> {
-    const drafts = recurringRulesForForm(form);
+    const drafts = recurringRulesForForm(form, recurringRuleEdits);
     if (drafts.length === 0) return false;
 
     const refetchedRules =
@@ -558,7 +644,7 @@ export function GoalPackOnboardingWizard({ isOpen }: GoalPackOnboardingWizardPro
 
   const selectedPriority = priorityTitle(form.priorityType);
   const reviewGoalName = form.goalName.trim() || selectedPriority;
-  const reviewRecurringRules = recurringRulesForForm(form);
+  const reviewRecurringItems = generatedRecurringRulesForForm(form);
   const reviewTargetCents = targetAmountForReview(form);
   const reviewCurrentCents = currentAmountForReview(form);
   const reviewContributionCents = monthlyContributionForReview(form);
@@ -619,8 +705,8 @@ export function GoalPackOnboardingWizard({ isOpen }: GoalPackOnboardingWizardPro
 
         {stepIndex === 0 ? (
           <OnboardingStep
-            eyebrow="Your cash flow"
-            title="Your Cash Flow: how much you make and spend every month"
+            eyebrow="Your Cash Flow"
+            eyebrowDetail=": how much you make and spend every month"
           >
             <p className="priority-step-why">
               This lets BudgetBuddy estimate your monthly gap before it builds a plan.
@@ -850,7 +936,7 @@ export function GoalPackOnboardingWizard({ isOpen }: GoalPackOnboardingWizardPro
                 aria-pressed={form.recurringSetupMode === 'quick'}
                 onClick={() => updateRecurringSetupMode('quick')}
               >
-                <strong>Skip advanced (recommended)</strong>
+                <strong>Skip advanced</strong>
                 <small>Use one income rule and one monthly bills rule.</small>
               </button>
               <button
@@ -984,7 +1070,7 @@ export function GoalPackOnboardingWizard({ isOpen }: GoalPackOnboardingWizardPro
 
             <p className="priority-form-note">
               Recurring rules live in Transactions and can be edited or deleted any time. Leave an
-              advanced row blank to skip it, or keep the recommended quick setup for a faster start.
+              advanced row blank to skip it, or use the quick setup for a faster start.
             </p>
 
             {clientError ? (
@@ -1023,20 +1109,87 @@ export function GoalPackOnboardingWizard({ isOpen }: GoalPackOnboardingWizardPro
 
             <div className="onboarding-review-section">
               <h4>Recurring entries to create</h4>
-              {reviewRecurringRules.length ? (
-                <ul>
-                  {reviewRecurringRules.map((rule) => (
-                    <li key={`${rule.kind}-${rule.category}-${rule.description}`}>
-                      <span>
-                        {rule.kind === 'income' ? 'Income' : 'Expense'} -{' '}
-                        {getCategoryLabel(rule.category)}
-                      </span>
-                      <strong>{centsToDisplay(rule.amount_cents)}</strong>
-                      <small>
-                        {rule.description}, monthly from {rule.start_date}
-                      </small>
-                    </li>
-                  ))}
+              {reviewRecurringItems.length ? (
+                <ul className="onboarding-review-rule-list">
+                  {reviewRecurringItems.map((rule) => {
+                    const edit = reviewEditForRule(rule, recurringRuleEdits);
+                    const draft = applyReviewEditToRule(rule, recurringRuleEdits);
+
+                    return (
+                      <li className="onboarding-review-rule-card" key={rule.key}>
+                        <div className="onboarding-review-rule-summary">
+                          <span>
+                            {draft.kind === 'income' ? 'Income' : 'Expense'} -{' '}
+                            {getCategoryLabel(draft.category)}
+                          </span>
+                          <strong>{centsToDisplay(draft.amount_cents)}</strong>
+                          <small>
+                            {draft.description}, monthly from {draft.start_date}
+                          </small>
+                        </div>
+
+                        <div className="onboarding-review-rule-fields">
+                          <label className="priority-form-field">
+                            <span>Amount</span>
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={edit.amount}
+                              onChange={(event) =>
+                                updateRecurringRuleEdit(rule, 'amount', event.target.value)
+                              }
+                            />
+                          </label>
+                          <label className="priority-form-field">
+                            <span>First occurrence</span>
+                            <input
+                              type="date"
+                              value={edit.startDate}
+                              onInput={(event) =>
+                                updateRecurringRuleEdit(
+                                  rule,
+                                  'startDate',
+                                  event.currentTarget.value,
+                                )
+                              }
+                              onChange={(event) =>
+                                updateRecurringRuleEdit(
+                                  rule,
+                                  'startDate',
+                                  event.currentTarget.value,
+                                )
+                              }
+                            />
+                          </label>
+                          <label className="priority-form-field">
+                            <span>Category</span>
+                            <select
+                              value={edit.category}
+                              onChange={(event) =>
+                                updateRecurringRuleEdit(rule, 'category', event.target.value)
+                              }
+                            >
+                              {TRANSACTION_CATEGORIES.map((category) => (
+                                <option value={category.value} key={category.value}>
+                                  {category.label}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <label className="priority-form-field">
+                            <span>Description</span>
+                            <input
+                              type="text"
+                              value={edit.description}
+                              onChange={(event) =>
+                                updateRecurringRuleEdit(rule, 'description', event.target.value)
+                              }
+                            />
+                          </label>
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
               ) : (
                 <p>No recurring entries selected. The starter plan will stay manual for now.</p>
