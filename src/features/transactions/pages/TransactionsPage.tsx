@@ -6,6 +6,7 @@ import { Button } from '../../../shared/components/ui/Button';
 import { today } from '../../../shared/utils/dates';
 import { useDebts } from '../../debts/hooks/useDebts';
 import { useGoals } from '../../goals/hooks/useGoals';
+import { OnboardingTooltip } from '../../onboarding';
 import {
   DEFAULT_QUICK_ADD_CHIPS,
 } from '../constants/categories';
@@ -430,6 +431,26 @@ export function TransactionsPage() {
     closeQuickAddModal();
   }
 
+  const recurringRules = recurringRulesQuery.data ?? [];
+  const recurringRulesPanel = (
+    <RecurringRulesPanel
+      debtLabels={debtLabels}
+      rules={recurringRules}
+      isLoading={recurringRulesQuery.isLoading}
+      isToggling={updateRecurringRuleMutation.isPending}
+      isDeleting={deleteRecurringRuleMutation.isPending}
+      processMessage={
+        processRecurringRulesMutation.error
+          ? normalizeError(processRecurringRulesMutation.error).message
+          : recurringProcessMessage
+      }
+      onAdd={() => openRecurringRuleModal()}
+      onEdit={openRecurringRuleModal}
+      onDelete={handleDeleteRecurringRule}
+      onToggle={handleToggleRecurringRule}
+    />
+  );
+
   return (
     <section className="page page--wide transactions-page" aria-labelledby="transactions-title">
       <div className="page-header transactions-page-header">
@@ -524,22 +545,16 @@ export function TransactionsPage() {
             onReset={handleResetQuickAdd}
           />
 
-          <RecurringRulesPanel
-            debtLabels={debtLabels}
-            rules={recurringRulesQuery.data ?? []}
-            isLoading={recurringRulesQuery.isLoading}
-            isToggling={updateRecurringRuleMutation.isPending}
-            isDeleting={deleteRecurringRuleMutation.isPending}
-            processMessage={
-              processRecurringRulesMutation.error
-                ? normalizeError(processRecurringRulesMutation.error).message
-                : recurringProcessMessage
-            }
-            onAdd={() => openRecurringRuleModal()}
-            onEdit={openRecurringRuleModal}
-            onDelete={handleDeleteRecurringRule}
-            onToggle={handleToggleRecurringRule}
-          />
+          {recurringRules.length > 0 ? (
+            <OnboardingTooltip
+              id="transactions-recurring-review"
+              content="Review recurring rules created during setup here. They generate real transactions when due or backdated."
+            >
+              {recurringRulesPanel}
+            </OnboardingTooltip>
+          ) : (
+            recurringRulesPanel
+          )}
         </aside>
       </div>
 

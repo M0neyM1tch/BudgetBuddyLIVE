@@ -7,6 +7,7 @@ import { KpiStrip } from '../components/KpiStrip';
 import { RecentTransactions } from '../components/RecentTransactions';
 import { useDashboard } from '../hooks/useDashboard';
 import { GoalPackDashboard } from '../../goalPacks/dashboard/GoalPackDashboard';
+import { OnboardingTooltip } from '../../onboarding';
 
 export function DashboardPage() {
   const {
@@ -20,7 +21,14 @@ export function DashboardPage() {
     <section className="page page--wide dashboard-page" aria-labelledby="dashboard-title">
       <DashboardGreeting />
 
-      {env.features.goalPacksEnabled ? <GoalPackDashboard /> : null}
+      {env.features.goalPacksEnabled ? (
+        <OnboardingTooltip
+          id="dashboard-goal-pack-review"
+          content="Start here after setup: review your active priority, progress, monthly gap, and next action."
+        >
+          <GoalPackDashboard />
+        </OnboardingTooltip>
+      ) : null}
 
       <KpiStrip
         data={kpisQuery.data}

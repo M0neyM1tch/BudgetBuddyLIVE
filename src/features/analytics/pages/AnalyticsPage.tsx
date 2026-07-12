@@ -68,7 +68,7 @@ export function AnalyticsPage() {
         </div>
         <OnboardingTooltip
           id="analytics-range-hint"
-          content="Change the date range to compare cash flow and spending patterns across periods."
+          content="Review Analytics after setup to see how cash flow and spending patterns affect your active goal. Change the date range to compare periods."
         >
           <PeriodSelector value={range} onChange={setRange} />
         </OnboardingTooltip>
