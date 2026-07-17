@@ -10,7 +10,7 @@ import { useCompleteOnboarding } from '../hooks/useOnboarding';
 const STEPS = [
   {
     eyebrow: 'Start here',
-    title: 'Welcome to BudgetBuddy',
+    title: 'Welcome to BudgBeacon',
     body: 'Track spending, reach your goals, and pay off debt from one secure workspace.',
     route: null,
     label: 'Next',

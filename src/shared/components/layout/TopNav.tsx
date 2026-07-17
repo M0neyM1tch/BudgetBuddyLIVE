@@ -14,10 +14,16 @@ export function TopNav({ items, preferencesItem, userEmail, onSignOut }: TopNavP
 
   return (
     <header className="shell-topnav">
-      <NavLink to="/dashboard" className="shell-brand" aria-label="BudgetBuddy dashboard">
-        <img src="/BBLogo.jpg" alt="" height="36" width="36" className="shell-brand-image" />
+      <NavLink to="/dashboard" className="shell-brand" aria-label="BudgBeacon dashboard">
+        <img
+          src="/brand/budgbeacon-compact-96.png"
+          alt=""
+          height="36"
+          width="36"
+          className="shell-brand-image"
+        />
         <span className="shell-brand-copy">
-          <span className="shell-brand-name">BudgetBuddy</span>
+          <span className="shell-brand-name">BudgBeacon</span>
           <span className="shell-brand-meta">Secure workspace</span>
         </span>
       </NavLink>

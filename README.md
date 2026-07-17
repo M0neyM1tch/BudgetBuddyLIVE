@@ -1,4 +1,4 @@
-# BudgetBuddy V2
+# BudgBeacon
 
 Personal finance web application rebuilt from V1 with a smaller security-first architecture.
 

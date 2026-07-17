@@ -3,8 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "license": "UNLICENSED",
-  "copyright": "Copyright (c) 2026 BudgetBuddy. All rights reserved.",
-  "ossLicenseNote": "BudgetBuddy is proprietary. Before adding new dependencies, verify license compatibility and avoid copyleft, network-copyleft, paid, or source-available packages unless intentionally approved.",
+  "ossLicenseNote": "BudgBeacon is proprietary. Before adding new dependencies, verify license compatibility and avoid copyleft, network-copyleft, paid, or source-available packages unless intentionally approved.",
   "type": "module",
   "scripts": {
     "dev": "vite",

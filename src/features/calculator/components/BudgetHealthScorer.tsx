@@ -43,7 +43,7 @@ export function BudgetHealthScorer({ data }: BudgetHealthScorerProps) {
         description="Budget Health calculates from dated transaction history for the month you select."
         requirements={[
           'Add at least one income transaction dated in the selected month.',
-          'Add expense transactions in that same month so BudgetBuddy can split needs, wants, and savings.',
+          'Add expense transactions in that same month so BudgBeacon can split needs, wants, and savings.',
           'Recurring rules only count here after they create dated transactions.',
         ]}
       />

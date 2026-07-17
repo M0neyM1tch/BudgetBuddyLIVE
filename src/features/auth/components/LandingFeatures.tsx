@@ -60,10 +60,10 @@ const FEATURES: LandingFeature[] = [
 const HOW_IT_WORKS: LandingStep[] = [
   {
     title: 'Choose your priority.',
-    body: 'Tell BudgetBuddy whether you are focused on a buffer, debt payoff, a major purchase, or a custom goal.',
+    body: 'Tell BudgBeacon whether you are focused on a buffer, debt payoff, a major purchase, or a custom goal.',
   },
   {
-    title: 'BudgetBuddy builds your starter plan.',
+    title: 'BudgBeacon builds your starter plan.',
     body: 'The app creates the goal, estimates the monthly need, and gives you a first action so you are not starting from blank.',
   },
   {
@@ -148,7 +148,7 @@ export function LandingFeatures() {
     <>
       <section className="landing-section" aria-labelledby="landing-features-title">
         <div className="landing-section__header">
-          <p className="landing-eyebrow">What BudgetBuddy helps with</p>
+          <p className="landing-eyebrow">What BudgBeacon helps with</p>
           <h2 id="landing-features-title">Turn a goal into a date, monthly gap, and next action.</h2>
         </div>
 

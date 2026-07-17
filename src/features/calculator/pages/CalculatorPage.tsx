@@ -43,7 +43,7 @@ export function CalculatorPage() {
             Calculator
           </h2>
           <p className="page-description">
-            Plan with your real BudgetBuddy data, model scenarios locally, and
+            Plan with your real BudgBeacon data, model scenarios locally, and
             keep every assumption visible before making decisions.
           </p>
         </div>

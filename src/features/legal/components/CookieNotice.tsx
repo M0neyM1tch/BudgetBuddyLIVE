@@ -17,7 +17,7 @@ export function CookieNotice() {
       <div>
         <strong>Essential storage only</strong>
         <p>
-          BudgetBuddy uses essential browser storage for authentication, security,
+          BudgBeacon uses essential browser storage for authentication, security,
           preferences, and dismissed notices. No third-party analytics or marketing
           cookies are planned at launch.
         </p>

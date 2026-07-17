@@ -39,11 +39,12 @@ export function ResetPasswordPage() {
     <main className="auth-page">
       <section className="auth-panel" aria-labelledby="reset-password-title">
         <div className="auth-brand">
-          <img src="/BBLogo.jpg" alt="BudgetBuddy" className="auth-logo" />
-          <div>
-            <p className="auth-kicker">BudgetBuddy</p>
-            <h1 id="reset-password-title">Choose a new password</h1>
-          </div>
+          <img
+            src="/brand/budgbeacon-full-960x540.png"
+            alt="BudgBeacon"
+            className="auth-logo"
+          />
+          <h1 id="reset-password-title">Choose a new password</h1>
         </div>
 
         <form className="auth-form" onSubmit={handleSubmit}>

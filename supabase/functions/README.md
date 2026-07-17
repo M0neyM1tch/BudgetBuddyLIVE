@@ -1,6 +1,6 @@
 # Edge Functions
 
-BudgetBuddy V2 Edge Functions hold privileged logic only:
+BudgBeacon Edge Functions hold privileged logic only:
 
 - recurring transaction processing
 - Plaid token exchange and transaction sync

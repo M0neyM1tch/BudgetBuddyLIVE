@@ -318,7 +318,7 @@ function buildRecommendations(input: {
   if (input.monthlyCommitmentCents <= 0) {
     recommendations.push({
       action: 'set_recurring_contribution',
-      body: 'Add a realistic monthly contribution so BudgetBuddy can project a completion date.',
+      body: 'Add a realistic monthly contribution so BudgBeacon can project a completion date.',
       impactLabel: 'Creates a visible target date.',
       title: 'Set a monthly contribution',
     });
