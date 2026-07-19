@@ -71,7 +71,8 @@ export const privacySections = [
     title: 'How information is used',
     body: [
       'Information is used to provide your BudgBeacon account, sync your data across devices, calculate summaries, Goal Pack plans, projections, scenarios, and next actions, secure the service, troubleshoot issues, and improve product quality.',
-      'BudgBeacon should not sell personal financial data. If advertising, analytics, Plaid, payments, or marketing systems are added later, this policy and consent controls should be updated before launch.',
+      'BudgBeacon should not sell personal financial data. If advertising, Plaid, payments, or marketing systems are added later, this policy and consent controls should be updated before launch.',
+      'BudgBeacon uses Cloudflare Web Analytics to understand aggregate site usage and page performance. Cloudflare Web Analytics may load a browser beacon for real-user monitoring. We use this information to improve reliability and the product experience, not for advertising, marketing retargeting, or selling user data.',
     ],
   },
   {
@@ -85,7 +86,7 @@ export const privacySections = [
     title: 'Cookies and local storage',
     body: [
       'At launch, BudgBeacon is intended to use only essential browser storage needed for authentication, security, preferences, and remembering whether notices or onboarding tips were dismissed.',
-      'BudgBeacon is not intended to run third-party analytics or marketing cookies at launch. If non-essential analytics, advertising pixels, or tracking cookies are added, users should receive a clear choice before those tools are enabled where required.',
+      'BudgBeacon may also use Cloudflare Web Analytics for aggregate performance and usage measurement. Cloudflare Web Analytics may load a browser beacon for real-user monitoring, but this does not require BudgBeacon to set marketing cookies. This analytics is not used for advertising or marketing retargeting.',
     ],
   },
   {

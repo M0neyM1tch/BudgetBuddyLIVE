@@ -15,11 +15,13 @@ export function CookieNotice() {
   return (
     <aside className="cookie-notice" aria-label="Cookie and storage notice">
       <div>
-        <strong>Essential storage only</strong>
+        <strong>Essential storage and analytics</strong>
         <p>
           BudgBeacon uses essential browser storage for authentication, security,
-          preferences, and dismissed notices. No third-party analytics or marketing
-          cookies are planned at launch.
+          preferences, and dismissed notices. We may also use Cloudflare Web Analytics
+          for aggregate performance and usage measurement. This is not used for
+          advertising or marketing retargeting and does not require BudgBeacon to set
+          marketing cookies.
         </p>
       </div>
       <div className="cookie-notice__actions">

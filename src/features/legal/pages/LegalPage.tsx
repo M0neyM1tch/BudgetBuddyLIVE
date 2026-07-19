@@ -16,7 +16,7 @@ export function LegalPage({ kind }: LegalPageProps) {
   const title = isTerms ? 'Terms of Service' : 'Privacy Policy';
   const description = isTerms
     ? 'The ground rules for using BudgBeacon and understanding the limits of financial calculators.'
-    : 'How BudgBeacon handles account, financial, and essential browser-storage data.';
+    : 'How BudgBeacon handles account, financial, essential browser-storage, and aggregate usage and performance data.';
   const sections = isTerms ? termsSections : privacySections;
 
   return (
