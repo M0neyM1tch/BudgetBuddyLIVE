@@ -1,16 +1,16 @@
 {
-  "name": "BudgetBuddy",
-  "short_name": "BudgetBuddy",
-  "description": "BudgetBuddy helps you track cash flow, goals, debts, recurring transactions, analytics, and planning calculators.",
+  "name": "BudgBeacon",
+  "short_name": "BudgBeacon",
+  "description": "BudgBeacon helps you track cash flow, goals, debts, recurring transactions, analytics, and planning calculators.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0b0f17",
   "theme_color": "#10b981",
   "icons": [
     {
-      "src": "/BBLogo.jpg",
+      "src": "/brand/budgbeacon-compact-512.png",
       "sizes": "512x512",
-      "type": "image/jpeg",
+      "type": "image/png",
       "purpose": "any"
     }
   ]

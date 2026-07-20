@@ -48,7 +48,7 @@ function EmptyGoalPackDashboard() {
         <p className="section-kicker">Active priority</p>
         <h3 id="goal-pack-dashboard-title">Choose the first plan to focus on</h3>
         <p>
-          Pick a top priority in onboarding so BudgetBuddy can turn goals, cash flow, and next
+          Pick a top priority in onboarding so BudgBeacon can turn goals, cash flow, and next
           actions into one dashboard.
         </p>
         <Link className="btn btn--secondary btn--md" to="/dashboard/preferences">
@@ -74,7 +74,7 @@ function ErrorGoalPackDashboard({ isRetrying, onRetry }: ErrorGoalPackDashboardP
           <p className="section-kicker">Active priority</p>
           <h3 id="goal-pack-dashboard-error-title">Goal Pack data could not load</h3>
           <p>
-            BudgetBuddy could not reach the plan data for this dashboard. Retry the request before
+            BudgBeacon could not reach the plan data for this dashboard. Retry the request before
             testing the active priority flow.
           </p>
           <Button
@@ -237,7 +237,7 @@ export function GoalPackDashboard() {
           ) : null}
           {completeActionMutation.isError || dismissActionMutation.isError ? (
             <p className="goal-pack-dashboard-action-error" role="alert">
-              Action update failed. If the plan refresh could not finish, BudgetBuddy restored the
+              Action update failed. If the plan refresh could not finish, BudgBeacon restored the
               action so you can try again.
             </p>
           ) : null}

@@ -39,7 +39,7 @@ export function CompoundGrowthCalculator({ data }: CompoundGrowthCalculatorProps
         </p>
         <p className="calculator-disclosure-note">
           <AlertCircle size={15} aria-hidden="true" />
-          Growth assumptions are hypothetical. BudgetBuddy does not recommend securities,
+          Growth assumptions are hypothetical. BudgBeacon does not recommend securities,
           accounts, tax strategies, or contribution amounts.
         </p>
       </div>

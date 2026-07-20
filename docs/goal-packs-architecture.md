@@ -4,7 +4,7 @@ Prepared: 2026-06-30
 
 ## Purpose
 
-Goal Packs add a personalization layer over the existing BudgetBuddy V2 modules without replacing the app shell. The first implementation should be additive, feature-flagged, and reversible.
+Goal Packs add a personalization layer over the existing BudgBeacon modules without replacing the app shell. The first implementation should be additive, feature-flagged, and reversible.
 
 ## Feature Flag
 

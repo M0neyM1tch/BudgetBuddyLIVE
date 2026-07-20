@@ -251,7 +251,7 @@ function priorityTitle(type: PriorityGoalType) {
 
 function errorMessage(error: unknown) {
   const message = error instanceof Error ? error.message : 'Unable to create the priority plan.';
-  return `${message} Try again; BudgetBuddy will reuse a saved starter plan if one was already created.`;
+  return `${message} Try again; BudgBeacon will reuse a saved starter plan if one was already created.`;
 }
 
 function positiveCents(value: string): number | null {
@@ -709,7 +709,7 @@ export function GoalPackOnboardingWizard({ isOpen }: GoalPackOnboardingWizardPro
             eyebrowDetail=": how much you make and spend every month"
           >
             <p className="priority-step-why">
-              This lets BudgetBuddy estimate your monthly gap before it builds a plan.
+              This lets BudgBeacon estimate your monthly gap before it builds a plan.
             </p>
             <div className="priority-form-grid">
               <label className="priority-form-field">
@@ -734,7 +734,7 @@ export function GoalPackOnboardingWizard({ isOpen }: GoalPackOnboardingWizardPro
               </label>
             </div>
             <p className="priority-form-note">
-              These numbers let BudgetBuddy estimate monthly capacity. You can optionally turn them
+              These numbers let BudgBeacon estimate monthly capacity. You can optionally turn them
               into recurring rules before finishing setup.
             </p>
           </OnboardingStep>
@@ -743,7 +743,7 @@ export function GoalPackOnboardingWizard({ isOpen }: GoalPackOnboardingWizardPro
         {stepIndex === 1 ? (
           <OnboardingStep eyebrow="Top priority" title="Choose the first plan">
             <p className="priority-step-why">
-              This tells BudgetBuddy which financial outcome to optimize first.
+              This tells BudgBeacon which financial outcome to optimize first.
             </p>
             <div className="priority-option-grid">
               {PRIORITY_OPTIONS.map(({ body, Icon, label, type }) => (
@@ -1084,7 +1084,7 @@ export function GoalPackOnboardingWizard({ isOpen }: GoalPackOnboardingWizardPro
         {stepIndex === 4 ? (
           <OnboardingStep eyebrow="Review" title="Review the plan before it is created">
             <p className="priority-step-why">
-              This confirms what BudgetBuddy will create before anything is saved.
+              This confirms what BudgBeacon will create before anything is saved.
             </p>
 
             <div className="onboarding-review-grid">
@@ -1209,7 +1209,7 @@ export function GoalPackOnboardingWizard({ isOpen }: GoalPackOnboardingWizardPro
 
             <p className="priority-form-note">
               After setup, start with Dashboard, then review Transactions, then open Analytics once
-              transactions exist. BudgetBuddy will use those entries to turn your priority into next
+              transactions exist. BudgBeacon will use those entries to turn your priority into next
               actions and progress momentum.
             </p>
 

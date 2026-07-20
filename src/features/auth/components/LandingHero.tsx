@@ -212,14 +212,19 @@ export function LandingHero() {
   return (
     <section className="landing-hero" aria-labelledby="landing-title">
       <div className="landing-hero__content">
+        <img
+          className="landing-hero__brand"
+          src="/brand/budgbeacon-full-960x540.png"
+          alt=""
+          aria-hidden="true"
+        />
         <div className="landing-hero__copy-block">
-          <p className="landing-eyebrow">Goal Packs planning</p>
           <h1 id="landing-title">
             Turn your top financial priority into a clear plan.{' '}
             <span>Know the next move every month.</span>
           </h1>
           <p className="landing-hero__copy">
-            BudgetBuddy helps you choose the goal that matters now, estimate the
+            BudgBeacon helps you choose the goal that matters now, estimate the
             monthly amount it needs, and keep progress moving with a dashboard,
             timeline, and next action.
           </p>
@@ -352,7 +357,7 @@ export function LandingHero() {
         <WealthProjectionChart data={results.projectionData} />
 
         <div className="landing-calculator__hook">
-          <strong>Save this projection inside BudgetBuddy.</strong>
+          <strong>Save this projection inside BudgBeacon.</strong>
           <span>Turn the estimate into tracked transactions, goals, debt payoff, and monthly plan prompts.</span>
         </div>
 

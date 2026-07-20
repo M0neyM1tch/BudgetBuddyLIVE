@@ -20,7 +20,7 @@ export function buildGoalPackMomentumReward(
   return {
     body:
       ACTION_REWARD_COPY[action.action_type] ??
-      'The action is complete and BudgetBuddy saved a fresh plan snapshot.',
+      'The action is complete and BudgBeacon saved a fresh plan snapshot.',
     impactLabel: action.impact_label ?? 'Plan momentum updated.',
     title: `${action.title} complete`,
   };

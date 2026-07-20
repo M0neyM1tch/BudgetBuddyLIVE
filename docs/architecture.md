@@ -1,6 +1,6 @@
-# BudgetBuddy V2 Architecture
+# BudgBeacon Architecture
 
-BudgetBuddy V2 is a feature-first React, TypeScript, Supabase, and Cloudflare Pages app. V1 is a reference library, not a merge target.
+BudgBeacon is a feature-first React, TypeScript, Supabase, and Cloudflare Pages app. V1 is a reference library, not a merge target.
 
 ## Boundaries
 

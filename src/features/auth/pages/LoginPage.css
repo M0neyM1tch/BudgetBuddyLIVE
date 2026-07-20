@@ -18,15 +18,20 @@
 .auth-brand {
   display: flex;
   align-items: center;
+  flex-direction: column;
   gap: var(--space-4);
   margin-bottom: var(--space-6);
+  width: 100%;
 }
 
 .auth-logo {
-  width: 44px;
-  height: 44px;
+  display: block;
+  height: auto;
+  margin-inline: auto;
+  max-width: min(100%, 320px);
   border-radius: var(--radius-md);
-  object-fit: cover;
+  object-fit: contain;
+  width: 100%;
 }
 
 .auth-kicker {

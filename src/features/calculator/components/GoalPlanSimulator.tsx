@@ -160,7 +160,7 @@ export function GoalPlanSimulator({ data }: GoalPlanSimulatorProps) {
     return (
       <CalculatorEmptyState
         title="Loading active goal plan"
-        description="BudgetBuddy is checking the active Goal Pack before opening scenario tools."
+        description="BudgBeacon is checking the active Goal Pack before opening scenario tools."
       />
     );
   }
@@ -186,7 +186,7 @@ export function GoalPlanSimulator({ data }: GoalPlanSimulatorProps) {
         description="The Goal Plan simulator adapts to your active Goal Pack once onboarding creates a plan."
         requirements={[
           'Complete onboarding or choose an active priority from the dashboard.',
-          'Create a goal with a target amount so BudgetBuddy has something to simulate.',
+          'Create a goal with a target amount so BudgBeacon has something to simulate.',
           'Recent expense transactions are only required for category-shift scenarios.',
         ]}
         action={

@@ -15,16 +15,16 @@ export function LegalPage({ kind }: LegalPageProps) {
   const isTerms = kind === 'terms';
   const title = isTerms ? 'Terms of Service' : 'Privacy Policy';
   const description = isTerms
-    ? 'The ground rules for using BudgetBuddy and understanding the limits of financial calculators.'
-    : 'How BudgetBuddy handles account, financial, and essential browser-storage data.';
+    ? 'The ground rules for using BudgBeacon and understanding the limits of financial calculators.'
+    : 'How BudgBeacon handles account, financial, essential browser-storage, and aggregate usage and performance data.';
   const sections = isTerms ? termsSections : privacySections;
 
   return (
     <main className="legal-page">
       <header className="legal-header">
         <Link className="legal-brand" to="/">
-          <img src="/BBLogo.jpg" alt="" />
-          <span>BudgetBuddy</span>
+          <img src="/brand/budgbeacon-compact-96.png" alt="" />
+          <span>BudgBeacon</span>
         </Link>
         <nav aria-label="Legal documents">
           {legalLinks.map((link) => (
@@ -49,7 +49,7 @@ export function LegalPage({ kind }: LegalPageProps) {
       <section className="legal-notice" aria-label="Important legal notice">
         <h2>Pre-launch review note</h2>
         <p>
-          These documents are practical product copy, not legal advice. BudgetBuddy
+          These documents are practical product copy, not legal advice. BudgBeacon
           should have counsel review Terms, Privacy, cookie notices, Goal Pack
           estimate language, financial calculator disclaimers, debt payoff scenario
           copy, and launch jurisdictions before public release.
@@ -68,8 +68,7 @@ export function LegalPage({ kind }: LegalPageProps) {
       </article>
 
       <footer className="legal-footer">
-        <span>Copyright © 2026 BudgetBuddy. All rights reserved.</span>
-        <Link to="/">Back to BudgetBuddy</Link>
+        <Link to="/">Back to BudgBeacon</Link>
       </footer>
     </main>
   );

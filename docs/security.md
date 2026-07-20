@@ -1,4 +1,4 @@
-# BudgetBuddy V2 Security Baseline
+# BudgBeacon Security Baseline
 
 ## Supabase
 

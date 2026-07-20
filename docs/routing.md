@@ -1,6 +1,6 @@
 # Routing Convention
 
-BudgetBuddy V2 keeps route configuration in `src/app/router.tsx` and lazy route wrappers in `src/app/routeElements.tsx`.
+BudgBeacon keeps route configuration in `src/app/router.tsx` and lazy route wrappers in `src/app/routeElements.tsx`.
 
 Feature page files may use named exports. `routeElements.tsx` adapts those named exports into the default component shape expected by `React.lazy()`.
 

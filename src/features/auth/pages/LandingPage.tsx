@@ -9,15 +9,14 @@ import '../../../styles/landing.css';
 export function LandingPage() {
   const { isAuthenticated, isLoading } = useAuth();
 
-  if (isLoading) return <LoadingState label="Loading BudgetBuddy" />;
+  if (isLoading) return <LoadingState label="Loading BudgBeacon" />;
   if (isAuthenticated) return <Navigate to="/dashboard" replace />;
 
   return (
     <main className="landing-page">
       <nav className="landing-nav" aria-label="Landing">
         <Link className="landing-nav__brand" to="/">
-          <img src="/BBLogo.jpg" alt="" />
-          <span>BudgetBuddy</span>
+          <span>BudgBeacon</span>
         </Link>
         <div className="landing-nav__actions">
           <Link to="/login">Sign in</Link>
@@ -31,11 +30,11 @@ export function LandingPage() {
       <section className="landing-final-cta" aria-labelledby="landing-final-title">
         <h2 id="landing-final-title">Start with the priority that matters now.</h2>
         <p>
-          Create your account, choose your top financial priority, and let BudgetBuddy
+          Create your account, choose your top financial priority, and let BudgBeacon
           turn your real numbers into a dashboard, monthly plan, and next action.
         </p>
         <p className="landing-final-cta__disclaimer">
-          BudgetBuddy provides educational estimates and planning scenarios, not financial,
+          BudgBeacon provides educational estimates and planning scenarios, not financial,
           investment, tax, mortgage, legal, or debt-relief advice.
         </p>
         <Link className="landing-button landing-button--primary" to="/signup">

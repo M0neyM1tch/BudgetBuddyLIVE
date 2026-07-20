@@ -4,9 +4,12 @@ export function LandingFooter() {
   return (
     <footer className="landing-footer">
       <div>
-        <img src="/BBLogo.jpg" alt="" className="landing-footer__logo" />
-        <span>BudgetBuddy</span>
-        <small>Copyright © 2026 BudgetBuddy. All rights reserved.</small>
+        <img
+          src="/brand/budgbeacon-compact-96.png"
+          alt=""
+          className="landing-footer__logo"
+        />
+        <span>BudgBeacon</span>
       </div>
       <nav aria-label="Landing footer">
         <Link to="/login">Sign in</Link>

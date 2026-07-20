@@ -212,7 +212,7 @@ function actionForDraft(draft: GoalPackOnboardingDraft): GoalActionDraft {
   return {
     action_type: 'set_recurring_contribution',
     title: 'Set the first recurring contribution',
-    description: 'Pick a realistic transfer amount so BudgetBuddy can track plan momentum.',
+    description: 'Pick a realistic transfer amount so BudgBeacon can track plan momentum.',
     impact_label: 'Creates the first repeatable progress step.',
     source: 'onboarding',
   };

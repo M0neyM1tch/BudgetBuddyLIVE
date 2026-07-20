@@ -52,7 +52,7 @@ export function RecurringCostAnalyzer({ data }: RecurringCostAnalyzerProps) {
         </p>
         <p className="calculator-disclosure-note">
           <AlertCircle size={15} aria-hidden="true" />
-          Selected rows model possible savings only. BudgetBuddy does not cancel services,
+          Selected rows model possible savings only. BudgBeacon does not cancel services,
           move money, or recommend changing a specific bill or subscription.
         </p>
       </div>

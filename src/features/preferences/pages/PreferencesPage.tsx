@@ -67,7 +67,7 @@ function CleanSlateResetModal({
           This action cannot be undone.
         </p>
         <p>
-          BudgetBuddy will remove goals, debts, transactions, recurring rules, Goal Pack
+          BudgBeacon will remove goals, debts, transactions, recurring rules, Goal Pack
           priorities, plan snapshots, next actions, quick-add cards, and dismissed setup tips.
           Your account, sign-in, legal acceptance, and profile stay in place.
         </p>
@@ -123,7 +123,7 @@ export function PreferencesPage() {
             Preferences
           </h2>
           <p className="page-description">
-            Manage lightweight guidance controls for this BudgetBuddy workspace.
+            Manage lightweight guidance controls for this BudgBeacon workspace.
           </p>
         </div>
       </div>

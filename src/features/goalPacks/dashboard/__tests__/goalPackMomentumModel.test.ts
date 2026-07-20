@@ -24,7 +24,7 @@ describe('buildGoalPackMomentumReward', () => {
     });
 
     expect(reward).toEqual({
-      body: 'The action is complete and BudgetBuddy saved a fresh plan snapshot.',
+      body: 'The action is complete and BudgBeacon saved a fresh plan snapshot.',
       impactLabel: 'Plan momentum updated.',
       title: 'Review plan complete',
     });

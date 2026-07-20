@@ -4,7 +4,7 @@ Prepared: 2026-06-30
 
 ## Product Decision
 
-BudgetBuddy V2 should remain a universal personal finance app. The pivot is not a narrow first-home product. The pivot is a Goal Packs layer that makes the existing app personalize around the user's top financial priority.
+BudgBeacon should remain a universal personal finance app. The pivot is not a narrow first-home product. The pivot is a Goal Packs layer that makes the existing app personalize around the user's top financial priority.
 
 Primary wedge:
 
