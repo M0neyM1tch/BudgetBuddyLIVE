@@ -20,6 +20,7 @@ export type GoalPackDashboardData = {
 };
 
 export type GoalPackDashboardMetric = {
+  isProjected?: boolean;
   label: string;
   tone: 'good' | 'watch' | 'risk' | 'neutral';
   value: string;
@@ -27,8 +28,10 @@ export type GoalPackDashboardMetric = {
 
 export type GoalPackDashboardModel = {
   actionDescription: string;
+  actionHref: string | null;
   actionImpact: string;
   actionId: string | null;
+  actionLabel: string | null;
   actionTitle: string;
   actionType: string;
   activeGoalId: string;
@@ -56,12 +59,6 @@ function dateLabel(value: string | null) {
     month: 'short',
     year: 'numeric',
   }).format(new Date(`${value}T00:00:00`));
-}
-
-function confidenceTone(score: number): GoalPackDashboardMetric['tone'] {
-  if (score >= 75) return 'good';
-  if (score >= 45) return 'watch';
-  return 'risk';
 }
 
 function metricLabels(goalType: GoalType) {
@@ -94,6 +91,41 @@ function actionDescription(action: GoalAction | undefined, fallback: string) {
   return action?.description?.trim() || fallback;
 }
 
+function actionDestination(
+  actionType: string,
+  goal: GoalPlanGoal,
+  goalType: GoalType,
+): Pick<GoalPackDashboardModel, 'actionHref' | 'actionLabel'> {
+  if (actionType === 'select_debt_method') {
+    return { actionHref: '/dashboard/debts', actionLabel: 'Review payoff methods' };
+  }
+
+  if (actionType === 'refine_missing_target' || actionType === 'review_spending_leak') {
+    return { actionHref: '/dashboard/goals', actionLabel: 'Refine goal plan' };
+  }
+
+  if (actionType === 'set_recurring_contribution' || actionType === 'confirm_contribution') {
+    if (goalType === 'debt_payoff') {
+      const linkedDebtId = (goal as GoalPlanGoal & { linked_debt_id?: unknown }).linked_debt_id;
+      if (typeof linkedDebtId === 'string' && linkedDebtId.length > 0) {
+        return {
+          actionHref: `/dashboard/transactions?new=1&debt_id=${encodeURIComponent(linkedDebtId)}`,
+          actionLabel: 'Add debt payment',
+        };
+      }
+
+      return { actionHref: '/dashboard/debts', actionLabel: 'Review linked debt' };
+    }
+
+    return {
+      actionHref: `/dashboard/transactions?new=1&goal_id=${encodeURIComponent(goal.id)}`,
+      actionLabel: 'Add contribution',
+    };
+  }
+
+  return { actionHref: null, actionLabel: null };
+}
+
 function snapshotLabel(snapshot: GoalPlanSnapshot | null, goal: GoalPlanGoal) {
   const timestamp = snapshot?.created_at ?? goal.last_plan_calculated_at;
   if (!timestamp) return 'Not recalculated yet';
@@ -119,14 +151,20 @@ export function buildGoalPackDashboardModel(
   const labels = metricLabels(goalType);
   const nextAction = data.actions[0];
   const fallbackAction = plan.actionDraft;
+  const actionType = nextAction?.action_type ?? fallbackAction.action_type;
   const confidenceScore = data.goal.confidence_score ?? plan.confidenceScore;
+  const destination =
+    plan.amountRemainingCents === 0
+      ? { actionHref: '/dashboard/goals', actionLabel: 'Review completed priority' }
+      : actionDestination(actionType, data.goal, goalType);
 
   return {
     actionDescription: actionDescription(nextAction, fallbackAction.description ?? ''),
+    ...destination,
     actionImpact: nextAction?.impact_label ?? fallbackAction.impact_label ?? 'Keeps the plan current.',
     actionId: nextAction?.id ?? null,
     actionTitle: nextAction?.title ?? fallbackAction.title,
-    actionType: nextAction?.action_type ?? fallbackAction.action_type,
+    actionType,
     activeGoalId: data.goal.id,
     amountRemainingCents: plan.amountRemainingCents,
     confidenceScore,
@@ -143,11 +181,13 @@ export function buildGoalPackDashboardModel(
       },
       {
         label: labels.projectedDate,
+        isProjected: Boolean(plan.projectedCompletionDate),
         tone: plan.projectedCompletionDate ? 'neutral' : 'watch',
         value: dateLabel(plan.projectedCompletionDate),
       },
       {
         label: labels.requiredMonthly,
+        isProjected: plan.requiredMonthlyCents !== null,
         tone:
           plan.requiredMonthlyCents !== null &&
           data.goal.monthly_commitment_cents !== null &&
@@ -158,11 +198,6 @@ export function buildGoalPackDashboardModel(
           plan.requiredMonthlyCents === null
             ? 'Set a date'
             : centsToDisplay(plan.requiredMonthlyCents, data.priority.currency_code),
-      },
-      {
-        label: 'Confidence',
-        tone: confidenceTone(confidenceScore),
-        value: `${confidenceScore}%`,
       },
     ],
     packDescription: pack.description,

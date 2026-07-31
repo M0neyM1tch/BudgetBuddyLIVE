@@ -11,7 +11,15 @@ vi.mock('../../../shared/lib/supabase', () => ({
   },
 }));
 
-const { createRecurringRule, createTransaction, updateRecurringRule } = await import('./transactions.api');
+const {
+  createRecurringRule,
+  createQuickAddTransaction,
+  createTransaction,
+  fetchQuickAddChips,
+  fetchTransactionSummary,
+  updateRecurringRule,
+  updateTransaction,
+} = await import('./transactions.api');
 
 const baseDraft: TransactionDraft = {
   amount_cents: 12_345,
@@ -217,5 +225,106 @@ describe('updateRecurringRule', () => {
     await updateRecurringRule('user-id', 'rule-id', { is_active: false });
 
     expect(updateMock).toHaveBeenCalledWith({ is_active: false });
+  });
+});
+
+describe('summary and retarget RPC adapters', () => {
+  beforeEach(() => {
+    rpcMock.mockReset();
+    fromMock.mockReset();
+  });
+
+  it('uses the server aggregate with the same normalized filters and keeps transfers out of totals', async () => {
+    rpcMock.mockResolvedValueOnce({
+      data: [{ income_cents: '50000', expense_cents: '12000', net_cents: '38000', transaction_count: '4' }],
+      error: null,
+    });
+
+    await expect(fetchTransactionSummary({ category: 'food', amountMin: 10, q: ' lunch% ' })).resolves.toEqual({
+      income_cents: 50_000,
+      expense_cents: 12_000,
+      net_cents: 38_000,
+      transaction_count: 4,
+    });
+    expect(rpcMock).toHaveBeenCalledWith('get_transaction_summary', expect.objectContaining({
+      p_category: 'food',
+      p_amount_min_cents: 1000,
+      p_search: 'lunch',
+    }));
+  });
+
+  it('uses the atomic retarget RPC for moves into, out of, and between allocation targets', async () => {
+    rpcMock.mockResolvedValueOnce({ data: { id: 'transaction-id' }, error: null });
+
+    await updateTransaction('user-id', 'transaction-id', {
+      amount_cents: 12_500,
+      kind: 'transfer',
+      category: 'debt_payment',
+      transaction_date: '2026-07-21',
+      description: 'Payment',
+      notes: null,
+      debt_id: '00000000-0000-4000-8000-000000000002',
+      goal_id: null,
+    });
+
+    expect(rpcMock).toHaveBeenCalledWith('update_transaction_and_retarget', expect.objectContaining({
+      p_transaction_id: 'transaction-id',
+      p_debt_id: '00000000-0000-4000-8000-000000000002',
+      p_goal_id: null,
+    }));
+  });
+});
+
+describe('quick-add persistence compatibility', () => {
+  beforeEach(() => {
+    rpcMock.mockReset();
+    fromMock.mockReset();
+  });
+
+  it('preserves a valid saved custom configuration instead of replacing it with defaults', async () => {
+    const maybeSingle = vi.fn().mockResolvedValue({
+      data: {
+        quick_add_chips: [{
+          id: 'custom',
+          label: 'My lunch',
+          description: 'Lunch',
+          amount_cents: 1_250,
+          kind: 'expense',
+          category: 'food',
+        }],
+      },
+      error: null,
+    });
+    const eq = vi.fn(() => ({ maybeSingle }));
+    const select = vi.fn(() => ({ eq }));
+    fromMock.mockReturnValue({ select });
+
+    await expect(fetchQuickAddChips('user-id')).resolves.toEqual([
+      expect.objectContaining({ id: 'custom', label: 'My lunch', amount_cents: 1_250 }),
+    ]);
+  });
+});
+
+describe('quick-add transaction idempotency adapter', () => {
+  beforeEach(() => {
+    rpcMock.mockReset();
+    fromMock.mockReset();
+  });
+
+  it('sends a stable client operation id through the atomic quick-add RPC', async () => {
+    rpcMock.mockResolvedValueOnce({ data: { id: 'transaction-id' }, error: null });
+
+    await createQuickAddTransaction('user-id', '00000000-0000-4000-8000-000000000099', {
+      ...baseDraft,
+      goal_id: '00000000-0000-4000-8000-000000000001',
+      kind: 'transfer',
+      category: 'savings',
+    });
+
+    expect(rpcMock).toHaveBeenCalledWith('create_quick_add_transaction', expect.objectContaining({
+      p_client_operation_id: '00000000-0000-4000-8000-000000000099',
+      p_goal_id: '00000000-0000-4000-8000-000000000001',
+      p_debt_id: null,
+    }));
   });
 });

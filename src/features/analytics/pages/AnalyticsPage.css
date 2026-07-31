@@ -507,11 +507,17 @@
   padding: var(--space-3);
 }
 
-.goal-aware-analytics-metric span,
+.goal-aware-analytics-metric-label,
 .goal-aware-analytics-row span {
   color: var(--color-text-muted);
   font-size: var(--text-xs);
   font-weight: 800;
+}
+
+.goal-aware-analytics-metric-label {
+  align-items: center;
+  display: flex;
+  gap: var(--space-1);
 }
 
 .goal-aware-analytics-metric strong {
@@ -559,32 +565,6 @@
   color: var(--color-text);
   font-size: var(--text-sm);
   line-height: 1.25;
-}
-
-.goal-aware-analytics-disclosure {
-  align-items: flex-start;
-  background: var(--color-surface-2);
-  border: 1px dashed var(--color-border-strong);
-  border-radius: var(--radius-lg);
-  display: flex;
-  gap: var(--space-3);
-  padding: var(--space-3);
-}
-
-.goal-aware-analytics-disclosure svg {
-  color: var(--color-warning);
-  flex: 0 0 auto;
-  margin-top: 0.1rem;
-}
-
-.goal-aware-analytics-disclosure p {
-  color: var(--color-text-muted);
-  font-size: var(--text-xs);
-  line-height: 1.6;
-}
-
-.goal-aware-analytics-disclosure strong {
-  color: var(--color-text-secondary);
 }
 
 .goal-aware-analytics-lever-title {

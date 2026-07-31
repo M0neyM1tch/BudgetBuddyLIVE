@@ -1,5 +1,4 @@
 import {
-  AlertCircle,
   Banknote,
   CalendarClock,
   Gauge,
@@ -9,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { ProjectedResultDisclosure } from '../../../shared/components/ui/ProjectedResultDisclosure';
 import { centsToDisplay } from '../../../shared/utils/currency';
 import { useActiveDebts } from '../../debts/hooks/useDebts';
 import { normalizeDebtsForPayoff } from '../../debts/utils/debt-payoff.utils';
@@ -208,12 +208,6 @@ export function GoalPlanSimulator({ data }: GoalPlanSimulatorProps) {
             Model local scenarios for {goal.name}. These estimates do not change
             the saved goal, transactions, debts, or next actions.
           </p>
-          <p className="calculator-disclosure-note">
-            <AlertCircle size={15} aria-hidden="true" />
-            These scenarios use user-entered balances, transaction history, and active-plan
-            assumptions. They are not financial, tax, mortgage, legal, debt-relief, or
-            investment recommendations.
-          </p>
         </div>
         <div className="goal-plan-simulator-pack">
           {pack.calculators.map((calculator) => (
@@ -355,16 +349,24 @@ export function GoalPlanSimulator({ data }: GoalPlanSimulatorProps) {
           </div>
 
           <div className="calculator-results-grid">
-            {metrics.map((metric) => (
-              <CalculatorStatCard
-                detail={metric.detail}
-                icon={metricIcon(metric)}
-                key={metric.label}
-                label={metric.label}
-                tone={metric.tone === 'warn' ? 'warn' : metric.tone === 'good' ? 'good' : 'default'}
-                value={metric.value}
-              />
-            ))}
+            {metrics.map((metric) => {
+              const hasProjectionDisclosure =
+                (metric.label === 'Scenario date' && Boolean(result.scenarioProjectedDate)) ||
+                (metric.label === 'Required monthly' && result.requiredMonthlyCents !== null);
+
+              return (
+                <div className="calculator-stat-card-with-disclosure" key={metric.label}>
+                  <CalculatorStatCard
+                    detail={metric.detail}
+                    icon={metricIcon(metric)}
+                    label={metric.label}
+                    tone={metric.tone === 'warn' ? 'warn' : metric.tone === 'good' ? 'good' : 'default'}
+                    value={metric.value}
+                  />
+                  {hasProjectionDisclosure ? <ProjectedResultDisclosure /> : null}
+                </div>
+              );
+            })}
           </div>
 
           <div className="goal-plan-simulator-breakdown">
@@ -401,31 +403,37 @@ export function GoalPlanSimulator({ data }: GoalPlanSimulatorProps) {
                     not recommendations to choose a specific method.
                   </p>
                   <div className="calculator-results-grid">
-                    <CalculatorStatCard
-                      label="Avalanche"
-                      value={dateLabel(result.debtComparison.avalanche.debtFreeDate)}
-                      detail={`${monthsLabel(result.debtComparison.avalanche.monthsToDebtFree)}, ${centsToDisplay(
-                        result.debtComparison.avalanche.totalInterestCents,
-                        priority.currency_code,
-                      )} estimated interest`}
-                      icon={<Gauge size={19} />}
-                      tone={
-                        result.debtComparison.fasterStrategy === 'avalanche' ||
-                        result.debtComparison.avalanche.totalInterestCents <= result.debtComparison.snowball.totalInterestCents
-                          ? 'good'
-                          : 'default'
-                      }
-                    />
-                    <CalculatorStatCard
-                      label="Snowball"
-                      value={dateLabel(result.debtComparison.snowball.debtFreeDate)}
-                      detail={`${monthsLabel(result.debtComparison.snowball.monthsToDebtFree)}, ${centsToDisplay(
-                        result.debtComparison.snowball.totalInterestCents,
-                        priority.currency_code,
-                      )} estimated interest`}
-                      icon={<Target size={19} />}
-                      tone={result.debtComparison.fasterStrategy === 'snowball' ? 'good' : 'default'}
-                    />
+                    <div className="calculator-stat-card-with-disclosure">
+                      <CalculatorStatCard
+                        label="Avalanche"
+                        value={dateLabel(result.debtComparison.avalanche.debtFreeDate)}
+                        detail={`${monthsLabel(result.debtComparison.avalanche.monthsToDebtFree)}, ${centsToDisplay(
+                          result.debtComparison.avalanche.totalInterestCents,
+                          priority.currency_code,
+                        )} estimated interest`}
+                        icon={<Gauge size={19} />}
+                        tone={
+                          result.debtComparison.fasterStrategy === 'avalanche' ||
+                          result.debtComparison.avalanche.totalInterestCents <= result.debtComparison.snowball.totalInterestCents
+                            ? 'good'
+                            : 'default'
+                        }
+                      />
+                      <ProjectedResultDisclosure label="Show avalanche payoff estimate details" />
+                    </div>
+                    <div className="calculator-stat-card-with-disclosure">
+                      <CalculatorStatCard
+                        label="Snowball"
+                        value={dateLabel(result.debtComparison.snowball.debtFreeDate)}
+                        detail={`${monthsLabel(result.debtComparison.snowball.monthsToDebtFree)}, ${centsToDisplay(
+                          result.debtComparison.snowball.totalInterestCents,
+                          priority.currency_code,
+                        )} estimated interest`}
+                        icon={<Target size={19} />}
+                        tone={result.debtComparison.fasterStrategy === 'snowball' ? 'good' : 'default'}
+                      />
+                      <ProjectedResultDisclosure label="Show snowball payoff estimate details" />
+                    </div>
                   </div>
                 </>
               ) : null}

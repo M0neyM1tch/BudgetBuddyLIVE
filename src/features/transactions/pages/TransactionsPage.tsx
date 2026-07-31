@@ -1,11 +1,12 @@
 import { Plus } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { normalizeError } from '../../../shared/api/errors';
 import { Button } from '../../../shared/components/ui/Button';
 import { today } from '../../../shared/utils/dates';
 import { useDebts } from '../../debts/hooks/useDebts';
 import { useGoals } from '../../goals/hooks/useGoals';
+import { useActiveFinancialPriority } from '../../goalPacks';
 import { OnboardingTooltip } from '../../onboarding';
 import {
   DEFAULT_QUICK_ADD_CHIPS,
@@ -14,6 +15,7 @@ import { DeleteRecurringRuleModal } from '../components/DeleteRecurringRuleModal
 import { DeleteTransactionModal } from '../components/DeleteTransactionModal';
 import { QuickAddCards } from '../components/QuickAddCards';
 import { QuickAddChipModal } from '../components/QuickAddChipModal';
+import { ActivePriorityContext } from '../components/ActivePriorityContext';
 import { RecurringRuleModal } from '../components/RecurringRuleModal';
 import { RecurringRulesPanel } from '../components/RecurringRulesPanel';
 import { TransactionFilters } from '../components/TransactionFilters';
@@ -23,6 +25,7 @@ import { TransactionSummaryBar } from '../components/TransactionSummaryBar';
 import { useTransactionFilters } from '../hooks/useTransactionFilters';
 import {
   useCreateRecurringRule,
+  useCreateQuickAddTransaction,
   useCreateTransaction,
   useDeleteRecurringRule,
   useDeleteTransaction,
@@ -31,6 +34,7 @@ import {
   useRecurringRules,
   useSaveQuickAddChips,
   useTransactionsPage,
+  useTransactionSummary,
   useUpdateRecurringRule,
   useUpdateTransaction,
 } from '../hooks/useTransactions';
@@ -41,32 +45,10 @@ import type {
   RecurringRuleDraft,
   Transaction,
   TransactionDraft,
-  TransactionSummary,
 } from '../types/transactions.types';
+import { resolveQuickAddTarget } from '../utils/quickAddTarget';
+import { clampTransactionPage, totalTransactionPages, TRANSACTION_PAGE_SIZES } from '../utils/pagination';
 import './TransactionsPage.css';
-
-const TRANSACTIONS_PAGE_SIZE = 25;
-
-function summarizeTransactions(transactions: Transaction[]): TransactionSummary {
-  return transactions.reduce<TransactionSummary>(
-    (summary, transaction) => {
-      const amount = Math.abs(transaction.amount_cents);
-
-      if (transaction.kind === 'income') {
-        summary.income_cents += amount;
-        summary.net_cents += amount;
-      }
-
-      if (transaction.kind === 'expense') {
-        summary.expense_cents += amount;
-        summary.net_cents -= amount;
-      }
-
-      return summary;
-    },
-    { income_cents: 0, expense_cents: 0, net_cents: 0 },
-  );
-}
 
 function dayOfMonth(isoDate: string): number | null {
   const day = Number(isoDate.split('-')[2]);
@@ -109,16 +91,21 @@ function emptyProcessResult(): RecurringProcessResult {
 }
 
 export function TransactionsPage() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const shouldOpenAddFromUrl = searchParams.get('new') === '1';
-  const { filters, hasFilters, setFilters, clearFilters } = useTransactionFilters();
+  const { filters, hasFilters, activeFilterCount, setFilters, clearFilters } = useTransactionFilters();
   const [page, setPage] = useState(0);
-  const transactionsQuery = useTransactionsPage(filters, page, TRANSACTIONS_PAGE_SIZE);
+  const [pageSize, setPageSize] = useState<(typeof TRANSACTION_PAGE_SIZES)[number]>(25);
+  const transactionsQuery = useTransactionsPage(filters, page, pageSize);
+  const summaryQuery = useTransactionSummary(filters);
   const debtsQuery = useDebts();
   const goalsQuery = useGoals();
+  const priorityQuery = useActiveFinancialPriority();
   const recurringRulesQuery = useRecurringRules();
   const quickAddQuery = useQuickAddChips();
   const createTransactionMutation = useCreateTransaction();
+  const createQuickAddMutation = useCreateQuickAddTransaction();
   const updateTransactionMutation = useUpdateTransaction();
   const deleteTransactionMutation = useDeleteTransaction();
   const createRecurringRuleMutation = useCreateRecurringRule();
@@ -129,18 +116,9 @@ export function TransactionsPage() {
   const { reset: resetCreateTransaction } = createTransactionMutation;
   const { reset: resetUpdateTransaction } = updateTransactionMutation;
 
-  const [transactionModalMode, setTransactionModalMode] = useState<'add' | 'edit' | null>(
-    () => (shouldOpenAddFromUrl ? 'add' : null),
-  );
+  const [transactionModalMode, setTransactionModalMode] = useState<'add' | 'edit' | null>(null);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
-  const [prefillDraft, setPrefillDraft] = useState<Partial<TransactionDraft> | null>(() =>
-    shouldOpenAddFromUrl
-      ? {
-          transaction_date: today(),
-          source: 'manual',
-        }
-      : null,
-  );
+  const [prefillDraft, setPrefillDraft] = useState<Partial<TransactionDraft> | null>(null);
   const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null);
   const [isRecurringModalOpen, setIsRecurringModalOpen] = useState(false);
   const [editingRecurringRule, setEditingRecurringRule] = useState<RecurringRule | null>(null);
@@ -148,11 +126,16 @@ export function TransactionsPage() {
   const [quickAddModalMode, setQuickAddModalMode] = useState<'add' | 'edit' | null>(null);
   const [editingQuickAddChip, setEditingQuickAddChip] = useState<QuickAddChip | null>(null);
   const [recurringProcessMessage, setRecurringProcessMessage] = useState<string | undefined>();
+  const [quickAddFeedback, setQuickAddFeedback] = useState<string | undefined>();
+  const [urlPrefillError, setUrlPrefillError] = useState<string | undefined>();
+  const consumedPrefillRef = useRef<string | null>(null);
+  const quickAddSubmissionRef = useRef<{ key: string; operationId: string } | null>(null);
+  const isQuickAddSubmittingRef = useRef(false);
 
   const transactionPage = transactionsQuery.data;
   const transactions = useMemo(() => transactionPage?.rows ?? [], [transactionPage]);
   const totalTransactions = transactionPage?.count ?? 0;
-  const totalPages = Math.max(1, Math.ceil(totalTransactions / TRANSACTIONS_PAGE_SIZE));
+  const totalPages = totalTransactionPages(totalTransactions, pageSize);
   const canGoPrevious = page > 0;
   const canGoNext = page + 1 < totalPages;
   const activeGoals = useMemo(
@@ -177,7 +160,6 @@ export function TransactionsPage() {
       ) as Record<string, string>,
     [debtsQuery.data],
   );
-  const summary = useMemo(() => summarizeTransactions(transactions), [transactions]);
   const recurringMutationError = normalizeError(
     createRecurringRuleMutation.error ?? updateRecurringRuleMutation.error,
   ).message;
@@ -196,17 +178,61 @@ export function TransactionsPage() {
   }, [resetCreateTransaction, resetUpdateTransaction]);
 
   useEffect(() => {
-    if (!shouldOpenAddFromUrl || typeof window === 'undefined') return;
+    if (page >= totalPages) {
+      queueMicrotask(() => setPage(clampTransactionPage(page, totalTransactions, pageSize)));
+    }
+  }, [page, pageSize, totalPages, totalTransactions]);
 
-    const nextParams = new URLSearchParams(window.location.search);
+  useEffect(() => {
+    if (!shouldOpenAddFromUrl) {
+      consumedPrefillRef.current = null;
+      return;
+    }
+
+    // A failed or refetching target query is not proof that a URL target is
+    // stale. Wait for both RLS-scoped collections to load successfully.
+    if (!goalsQuery.isSuccess || !debtsQuery.isSuccess) {
+      return;
+    }
+
+    const prefillKey = searchParams.toString();
+    if (consumedPrefillRef.current === prefillKey) return;
+    consumedPrefillRef.current = prefillKey;
+
+    const requestedGoalId = searchParams.get('goal_id');
+    const requestedDebtId = searchParams.get('debt_id');
+    const goal = activeGoals.find((candidate) => candidate.id === requestedGoalId);
+    const debt = activeDebts.find((candidate) => candidate.id === requestedDebtId);
+
+    if ((requestedGoalId && !goal) || (requestedDebtId && !debt) || (goal && debt)) {
+      queueMicrotask(() =>
+        setUrlPrefillError('That contribution target is unavailable. Choose an active goal or debt.'),
+      );
+    } else {
+      queueMicrotask(() => setUrlPrefillError(undefined));
+      const initialDraft = goal
+        ? { goal_id: goal.id, category: 'savings' }
+        : debt
+          ? { debt_id: debt.id, category: 'debt_payment' }
+          : null;
+      queueMicrotask(() => openAddTransaction(initialDraft));
+    }
+
+    const nextParams = new URLSearchParams(searchParams);
     nextParams.delete('new');
-    const query = nextParams.toString();
-    window.history.replaceState(
-      window.history.state,
-      '',
-      `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`,
-    );
-  }, [shouldOpenAddFromUrl]);
+    nextParams.delete('goal_id');
+    nextParams.delete('debt_id');
+    setSearchParams(nextParams, { replace: true });
+  }, [
+    activeDebts,
+    activeGoals,
+    debtsQuery.isSuccess,
+    goalsQuery.isSuccess,
+    openAddTransaction,
+    searchParams,
+    setSearchParams,
+    shouldOpenAddFromUrl,
+  ]);
 
   function openEditTransaction(transaction: Transaction) {
     createTransactionMutation.reset();
@@ -400,18 +426,58 @@ export function TransactionsPage() {
   }
 
   async function handleQuickAddFire(chip: QuickAddChip) {
+    if (isQuickAddSubmittingRef.current || createQuickAddMutation.isPending) return;
+    const resolution = resolveQuickAddTarget(
+      chip,
+      priorityQuery.data?.active_goal_id,
+      activeGoals,
+      activeDebts,
+    );
+    if (resolution.status === 'missing_priority') {
+      setQuickAddFeedback(resolution.message);
+      navigate('/dashboard/goals');
+      return;
+    }
+    if (resolution.status === 'invalid_target') {
+      setQuickAddFeedback(resolution.message);
+      return;
+    }
+
+    const transactionDate = today();
+    const operationKey = JSON.stringify({
+      amount_cents: chip.amount_cents,
+      description: chip.description,
+      transactionDate,
+      target: chip.target ?? null,
+      draft: resolution.draft,
+    });
+    if (quickAddSubmissionRef.current?.key !== operationKey) {
+      quickAddSubmissionRef.current = {
+        key: operationKey,
+        operationId: crypto.randomUUID(),
+      };
+    }
+
+    isQuickAddSubmittingRef.current = true;
+    setQuickAddFeedback(undefined);
     try {
-      await createTransactionMutation.mutateAsync({
-        amount_cents: chip.amount_cents,
-        kind: chip.kind,
-        category: chip.category,
-        transaction_date: today(),
-        description: chip.description,
-        notes: null,
-        source: 'manual',
+      await createQuickAddMutation.mutateAsync({
+        clientOperationId: quickAddSubmissionRef.current.operationId,
+        draft: {
+          amount_cents: chip.amount_cents,
+          ...resolution.draft,
+          transaction_date: transactionDate,
+          description: chip.description,
+          notes: null,
+          source: 'manual',
+        },
       });
-    } catch {
-      // React Query keeps the error on the mutation for the next visible submit surface.
+      quickAddSubmissionRef.current = null;
+      setQuickAddFeedback(`Added ${chip.label}.`);
+    } catch (error) {
+      setQuickAddFeedback(normalizeError(error).message);
+    } finally {
+      isQuickAddSubmittingRef.current = false;
     }
   }
 
@@ -432,6 +498,27 @@ export function TransactionsPage() {
   }
 
   const recurringRules = recurringRulesQuery.data ?? [];
+  const activePriorityGoal = activeGoals.find(
+    (goal) => goal.id === priorityQuery.data?.active_goal_id,
+  );
+  const activePriorityDebtId = (activePriorityGoal as (typeof activeGoals)[number] & {
+    linked_debt_id?: string | null;
+  } | undefined)?.linked_debt_id;
+  const activePriorityDebt = activeDebts.find((debt) => debt.id === activePriorityDebtId);
+  const activePriorityName = activePriorityGoal?.name ?? null;
+  const isDebtPriority = activePriorityGoal?.goal_type === 'debt_payoff';
+  const quickAddIssue = (chip: QuickAddChip) => {
+    if (chip.target?.kind === 'active_priority' && priorityQuery.isLoading) {
+      return 'Loading active priority…';
+    }
+    const resolution = resolveQuickAddTarget(
+      chip,
+      priorityQuery.data?.active_goal_id,
+      activeGoals,
+      activeDebts,
+    );
+    return resolution.status === 'resolved' ? null : resolution.message;
+  };
   const recurringRulesPanel = (
     <RecurringRulesPanel
       debtLabels={debtLabels}
@@ -474,13 +561,35 @@ export function TransactionsPage() {
         </Button>
       </div>
 
-      <TransactionSummaryBar summary={summary} />
+      {urlPrefillError ? <p className="transaction-form-error" role="alert">{urlPrefillError}</p> : null}
+
+      <QuickAddCards
+        chips={quickAddQuery.data ?? []}
+        isLoading={quickAddQuery.isLoading}
+        isSaving={saveQuickAddMutation.isPending}
+        isCreating={createQuickAddMutation.isPending}
+        feedback={quickAddFeedback}
+        activePriorityName={activePriorityName}
+        getChipIssue={quickAddIssue}
+        onFire={(chip) => { void handleQuickAddFire(chip); }}
+        onChoosePriority={() => navigate('/dashboard/goals')}
+        onEdit={openQuickAddModal}
+        onAdd={() => openQuickAddModal()}
+        onReset={handleResetQuickAdd}
+      />
+
+      <TransactionSummaryBar
+        summary={summaryQuery.data}
+        isLoading={summaryQuery.isLoading || summaryQuery.isFetching}
+        error={summaryQuery.error ? normalizeError(summaryQuery.error).message : undefined}
+      />
 
       <div className="transactions-layout">
         <div className="transactions-main-column">
           <TransactionFilters
             filters={filters}
             hasFilters={hasFilters}
+            activeFilterCount={activeFilterCount}
             onChange={(updates) => {
               setPage(0);
               setFilters(updates);
@@ -511,6 +620,18 @@ export function TransactionsPage() {
               {totalTransactions === 1 ? '' : 's'})
             </p>
             <div>
+              <label className="transactions-page-size">
+                <span>Transactions per page</span>
+                <select
+                  value={pageSize}
+                  onChange={(event) => {
+                    setPageSize(Number(event.target.value) as (typeof TRANSACTION_PAGE_SIZES)[number]);
+                    setPage(0);
+                  }}
+                >
+                  {TRANSACTION_PAGE_SIZES.map((size) => <option key={size} value={size}>{size}</option>)}
+                </select>
+              </label>
               <Button
                 type="button"
                 variant="secondary"
@@ -532,17 +653,15 @@ export function TransactionsPage() {
         </div>
 
         <aside className="transactions-side-column">
-          <QuickAddCards
-            chips={quickAddQuery.data ?? []}
-            isLoading={quickAddQuery.isLoading}
-            isSaving={saveQuickAddMutation.isPending}
-            isCreating={createTransactionMutation.isPending}
-            onFire={(chip) => {
-              void handleQuickAddFire(chip);
-            }}
-            onEdit={openQuickAddModal}
-            onAdd={() => openQuickAddModal()}
-            onReset={handleResetQuickAdd}
+          <ActivePriorityContext
+            name={activePriorityName}
+            currentCents={activePriorityGoal?.current_amount_cents ?? null}
+            targetCents={activePriorityGoal?.target_amount_cents ?? null}
+            remainingCents={isDebtPriority
+              ? activePriorityDebt?.current_balance_cents ?? null
+              : activePriorityGoal?.amount_remaining_cents ?? null}
+            isDebt={isDebtPriority}
+            isLoading={priorityQuery.isLoading || goalsQuery.isLoading || debtsQuery.isLoading}
           />
 
           {recurringRules.length > 0 ? (
@@ -636,6 +755,9 @@ export function TransactionsPage() {
         isOpen={quickAddModalMode !== null}
         chip={editingQuickAddChip}
         isSubmitting={saveQuickAddMutation.isPending}
+        activeGoals={activeGoals}
+        activeDebts={activeDebts}
+        activePriorityName={activePriorityName}
         serverError={saveQuickAddMutation.error ? quickAddMutationError : undefined}
         onClose={closeQuickAddModal}
         onDelete={handleQuickAddDelete}

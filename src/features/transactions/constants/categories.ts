@@ -33,12 +33,13 @@ export const RECURRING_FREQUENCY_OPTIONS = [
 
 export const DEFAULT_QUICK_ADD_CHIPS = [
   {
-    id: 'coffee',
-    label: 'Coffee',
+    id: 'active-priority',
+    label: 'Active priority',
     description: '',
-    amount_cents: 550,
+    amount_cents: 10_000,
     kind: 'expense',
-    category: 'food',
+    category: 'savings',
+    target: { kind: 'active_priority' },
   },
   {
     id: 'groceries',

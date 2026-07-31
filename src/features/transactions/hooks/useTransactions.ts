@@ -2,13 +2,17 @@ import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query';
 import { AppError } from '../../../shared/api/errors';
 import { queryClient } from '../../../shared/api/queryClient';
 import { useAuth } from '../../auth/hooks/useAuth';
+import { goalPackQueryRoot } from '../../goalPacks/public';
+import { transactionQueryRoot, transactionRecurringRulesKey } from '../public';
 import {
   createRecurringRule,
+  createQuickAddTransaction,
   createTransaction,
   deleteRecurringRule,
   deleteTransaction,
   fetchQuickAddChips,
   fetchRecurringRules,
+  fetchTransactionSummary,
   fetchTransactions,
   processDueRecurringRules,
   saveQuickAddChips,
@@ -26,16 +30,18 @@ import type {
 } from '../types/transactions.types';
 
 export const transactionKeys = {
-  all: ['transactions'] as const,
+  all: transactionQueryRoot,
   lists: () => [...transactionKeys.all, 'list'] as const,
   list: (userId: string, filters: TransactionFilters) =>
     [...transactionKeys.lists(), userId, filters] as const,
-  recurringRules: (userId: string) =>
-    [...transactionKeys.all, 'recurring-rules', userId] as const,
+  recurringRules: transactionRecurringRulesKey,
   quickAddChips: (userId: string) =>
     [...transactionKeys.all, 'quick-add-chips', userId] as const,
   page: (userId: string, filters: TransactionFilters, page: number, pageSize: number) =>
     [...transactionKeys.list(userId, filters), page, pageSize] as const,
+  summaries: () => [...transactionKeys.all, 'summary'] as const,
+  summary: (userId: string, filters: TransactionFilters) =>
+    [...transactionKeys.summaries(), userId, filters] as const,
 };
 
 function useRequiredUserId(): string | null {
@@ -53,9 +59,11 @@ function requireUserId(userId: string | null): string {
 async function invalidateTransactions(userId: string) {
   await Promise.all([
     queryClient.invalidateQueries({ queryKey: transactionKeys.lists() }),
+    queryClient.invalidateQueries({ queryKey: transactionKeys.summaries() }),
     queryClient.invalidateQueries({ queryKey: transactionKeys.recurringRules(userId) }),
     queryClient.invalidateQueries({ queryKey: ['debts'] }),
     queryClient.invalidateQueries({ queryKey: ['goals'] }),
+    queryClient.invalidateQueries({ queryKey: goalPackQueryRoot }),
     queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
     queryClient.invalidateQueries({ queryKey: ['analytics'] }),
     queryClient.invalidateQueries({ queryKey: ['calculator'] }),
@@ -84,20 +92,42 @@ export function useTransactions(filters: TransactionFilters) {
   };
 }
 
+export function useTransactionSummary(filters: TransactionFilters) {
+  const userId = useRequiredUserId();
+
+  return useQuery({
+    queryKey: userId ? transactionKeys.summary(userId, filters) : transactionKeys.summaries(),
+    queryFn: () => fetchTransactionSummary(filters),
+    enabled: Boolean(userId),
+    // Summary values must never be retained while the filter universe changes.
+    placeholderData: undefined,
+  });
+}
+
 export function useCreateTransaction() {
   const userId = useRequiredUserId();
 
   return useMutation({
     mutationFn: (draft: TransactionDraft) => createTransaction(requireUserId(userId), draft),
     onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: transactionKeys.lists() }),
-        queryClient.invalidateQueries({ queryKey: ['debts'] }),
-        queryClient.invalidateQueries({ queryKey: ['goals'] }),
-        queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
-        queryClient.invalidateQueries({ queryKey: ['analytics'] }),
-        queryClient.invalidateQueries({ queryKey: ['calculator'] }),
-      ]);
+      await invalidateTransactions(requireUserId(userId));
+    },
+  });
+}
+
+export function useCreateQuickAddTransaction() {
+  const userId = useRequiredUserId();
+
+  return useMutation({
+    mutationFn: ({
+      clientOperationId,
+      draft,
+    }: {
+      clientOperationId: string;
+      draft: TransactionDraft;
+    }) => createQuickAddTransaction(requireUserId(userId), clientOperationId, draft),
+    onSuccess: async () => {
+      await invalidateTransactions(requireUserId(userId));
     },
   });
 }
@@ -109,14 +139,7 @@ export function useUpdateTransaction() {
     mutationFn: ({ id, updates }: { id: string; updates: TransactionUpdate }) =>
       updateTransaction(requireUserId(userId), id, updates),
     onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: transactionKeys.lists() }),
-        queryClient.invalidateQueries({ queryKey: ['debts'] }),
-        queryClient.invalidateQueries({ queryKey: ['goals'] }),
-        queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
-        queryClient.invalidateQueries({ queryKey: ['analytics'] }),
-        queryClient.invalidateQueries({ queryKey: ['calculator'] }),
-      ]);
+      await invalidateTransactions(requireUserId(userId));
     },
   });
 }
@@ -127,14 +150,7 @@ export function useDeleteTransaction() {
   return useMutation({
     mutationFn: (id: string) => deleteTransaction(requireUserId(userId), id),
     onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: transactionKeys.lists() }),
-        queryClient.invalidateQueries({ queryKey: ['debts'] }),
-        queryClient.invalidateQueries({ queryKey: ['goals'] }),
-        queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
-        queryClient.invalidateQueries({ queryKey: ['analytics'] }),
-        queryClient.invalidateQueries({ queryKey: ['calculator'] }),
-      ]);
+      await invalidateTransactions(requireUserId(userId));
     },
   });
 }

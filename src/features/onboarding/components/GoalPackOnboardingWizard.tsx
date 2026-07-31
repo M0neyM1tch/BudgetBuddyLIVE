@@ -441,7 +441,6 @@ function currentAmountForReview(form: OnboardingForm): number | null {
 }
 
 function monthlyContributionForReview(form: OnboardingForm): number | null {
-  if (form.priorityType === 'debt_payoff') return positiveCents(form.debtMinimumPayment);
   return positiveCents(form.monthlyCommitment);
 }
 
@@ -832,7 +831,19 @@ export function GoalPackOnboardingWizard({ isOpen }: GoalPackOnboardingWizardPro
                     />
                   </label>
                   <label className="priority-form-field">
-                    <span>Minimum payment</span>
+                    <span>Planned monthly payment</span>
+                    <small>The amount you intend to direct to this payoff goal each month.</small>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="250.00"
+                      value={form.monthlyCommitment}
+                      onChange={(event) => updateField('monthlyCommitment', event.target.value)}
+                    />
+                  </label>
+                  <label className="priority-form-field">
+                    <span>Required minimum payment</span>
+                    <small>The contractual minimum due for this debt each month.</small>
                     <input
                       type="text"
                       inputMode="decimal"

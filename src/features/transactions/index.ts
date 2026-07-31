@@ -3,5 +3,6 @@ export * from './constants/categoryIcons';
 export * from './constants/categories';
 export * from './hooks/useTransactionFilters';
 export * from './hooks/useTransactions';
+export * from './public';
 export * from './schemas/transactions.schema';
 export * from './types/transactions.types';

@@ -14,6 +14,10 @@ const FILTER_KEYS = [
   'q',
 ] as const;
 
+function hasFilterValue(value: unknown): boolean {
+  return value !== undefined && value !== null && value !== '';
+}
+
 function readFilters(searchParams: URLSearchParams): TransactionFilters {
   const rawFilters = {
     from: searchParams.get('from') || undefined,
@@ -26,8 +30,34 @@ function readFilters(searchParams: URLSearchParams): TransactionFilters {
     q: searchParams.get('q') || undefined,
   };
 
-  const parsed = transactionFiltersSchema.safeParse(rawFilters);
-  return parsed.success ? parsed.data : {};
+  const filters: TransactionFilters = {};
+
+  for (const key of FILTER_KEYS) {
+    const value = rawFilters[key];
+    if (value === undefined) continue;
+
+    // Validate each URL field independently. A malformed field must not erase
+    // other valid filters while users correct or share a query string.
+    const parsed = transactionFiltersSchema.safeParse({ [key]: value });
+    if (parsed.success && parsed.data[key] !== undefined) {
+      filters[key] = parsed.data[key] as never;
+    }
+  }
+
+  // URL input can still combine otherwise valid values into an invalid range.
+  // Retain the first boundary and discard only the conflicting later boundary.
+  if (filters.from && filters.to && filters.from > filters.to) {
+    delete filters.to;
+  }
+  if (
+    filters.amountMin !== undefined &&
+    filters.amountMax !== undefined &&
+    filters.amountMin > filters.amountMax
+  ) {
+    delete filters.amountMax;
+  }
+
+  return filters;
 }
 
 function writeFilters(
@@ -54,9 +84,9 @@ export function useTransactionFilters() {
     (updates: Partial<TransactionFilters>) => {
       const nextFilters = { ...filters, ...updates };
       const parsed = transactionFiltersSchema.safeParse(nextFilters);
-      setSearchParams(writeFilters(searchParams, parsed.success ? parsed.data : nextFilters), {
-        replace: true,
-      });
+      if (!parsed.success) return;
+
+      setSearchParams(writeFilters(searchParams, parsed.data), { replace: true });
     },
     [filters, searchParams, setSearchParams],
   );
@@ -69,7 +99,8 @@ export function useTransactionFilters() {
 
   return {
     filters,
-    hasFilters: FILTER_KEYS.some((key) => Boolean(filters[key])),
+    hasFilters: FILTER_KEYS.some((key) => hasFilterValue(filters[key])),
+    activeFilterCount: FILTER_KEYS.filter((key) => hasFilterValue(filters[key])).length,
     setFilters,
     clearFilters,
   };

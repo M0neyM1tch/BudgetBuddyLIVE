@@ -85,6 +85,7 @@ describe('buildGoalPackOnboardingPlan', () => {
       debtBalance: '8200',
       debtInterestRate: '19.99',
       debtMinimumPayment: '150',
+      monthlyCommitment: '275',
       priorityType: 'debt_payoff',
       targetAmount: '',
       targetDate: '',
@@ -99,7 +100,7 @@ describe('buildGoalPackOnboardingPlan', () => {
     });
     expect(plan.goalPlanUpdate).toMatchObject({
       goal_type: 'debt_payoff',
-      monthly_commitment_cents: 15_000,
+      monthly_commitment_cents: 27_500,
     });
     expect(plan.debtDraft).toMatchObject({
       current_balance_cents: 820_000,

@@ -2,6 +2,8 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { AppError } from '../../../shared/api/errors';
 import { queryClient } from '../../../shared/api/queryClient';
 import { useAuth } from '../../auth/hooks/useAuth';
+import { goalPackQueryRoot } from '../../goalPacks/public';
+import { transactionRecurringRulesKey } from '../../transactions/public';
 import {
   allocateToGoal,
   archiveGoal,
@@ -39,7 +41,8 @@ async function invalidateGoalSurfaces(userId: string) {
   await Promise.all([
     queryClient.invalidateQueries({ queryKey: goalKeys.list(userId) }),
     queryClient.invalidateQueries({ queryKey: ['transactions'] }),
-    queryClient.invalidateQueries({ queryKey: ['recurring-rules'] }),
+    queryClient.invalidateQueries({ queryKey: transactionRecurringRulesKey(userId) }),
+    queryClient.invalidateQueries({ queryKey: goalPackQueryRoot }),
     queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
     queryClient.invalidateQueries({ queryKey: ['analytics'] }),
     queryClient.invalidateQueries({ queryKey: ['calculator'] }),

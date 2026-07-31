@@ -78,12 +78,20 @@ export type QuickAddChip = {
   amount_cents: number;
   kind: SupportedTransactionKind;
   category: string;
+  target?: QuickAddTarget;
 };
+
+/** A persisted quick-add target. `active_priority` is deliberately resolved at execution time. */
+export type QuickAddTarget =
+  | { kind: 'active_priority' }
+  | { kind: 'goal'; id: string }
+  | { kind: 'debt'; id: string };
 
 export type TransactionSummary = {
   income_cents: number;
   expense_cents: number;
   net_cents: number;
+  transaction_count: number;
 };
 
 export type RecurringProcessResult = {

@@ -118,6 +118,16 @@
   min-width: 0;
 }
 
+.calculator-stat-card-with-disclosure {
+  position: relative;
+}
+
+.calculator-stat-card-with-disclosure > .projected-result-disclosure {
+  position: absolute;
+  right: var(--space-3);
+  top: var(--space-3);
+}
+
 .calculator-results-grid--four {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }

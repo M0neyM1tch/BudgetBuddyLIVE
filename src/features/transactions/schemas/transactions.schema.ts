@@ -119,6 +119,12 @@ export const recurringRuleUpdateSchema = recurringRuleBaseSchema.partial().refin
   'At least one recurring rule field is required.',
 );
 
+export const quickAddTargetSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('active_priority') }).strict(),
+  z.object({ kind: z.literal('goal'), id: z.string().uuid() }).strict(),
+  z.object({ kind: z.literal('debt'), id: z.string().uuid() }).strict(),
+]);
+
 export const quickAddChipSchema = z.object({
   id: z.string().trim().min(1).max(48),
   label: z.string().trim().min(1).max(24),
@@ -126,6 +132,7 @@ export const quickAddChipSchema = z.object({
   amount_cents: amountCentsSchema,
   kind: supportedTransactionKindSchema,
   category: transactionCategorySchema,
-});
+  target: quickAddTargetSchema.optional(),
+}).strict();
 
 export const quickAddChipsSchema = z.array(quickAddChipSchema).max(6);

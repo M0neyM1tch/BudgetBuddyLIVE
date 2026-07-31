@@ -2,6 +2,8 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { AppError } from '../../../shared/api/errors';
 import { queryClient } from '../../../shared/api/queryClient';
 import { useAuth } from '../../auth/hooks/useAuth';
+import { goalPackQueryRoot } from '../../goalPacks/public';
+import { transactionRecurringRulesKey } from '../../transactions/public';
 import {
   allocateDebtPayment,
   archiveDebt,
@@ -39,7 +41,9 @@ async function invalidateDebtSurfaces(userId: string) {
     queryClient.invalidateQueries({ queryKey: debtKeys.list(userId) }),
     queryClient.invalidateQueries({ queryKey: debtKeys.active(userId) }),
     queryClient.invalidateQueries({ queryKey: ['transactions'] }),
-    queryClient.invalidateQueries({ queryKey: ['recurring-rules'] }),
+    queryClient.invalidateQueries({ queryKey: transactionRecurringRulesKey(userId) }),
+    queryClient.invalidateQueries({ queryKey: ['goals'] }),
+    queryClient.invalidateQueries({ queryKey: goalPackQueryRoot }),
     queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
     queryClient.invalidateQueries({ queryKey: ['analytics'] }),
     queryClient.invalidateQueries({ queryKey: ['calculator'] }),
@@ -127,21 +131,19 @@ export function useDeleteDebtPermanently() {
 }
 
 export function useAllocateDebtPayment() {
+  const userId = useRequiredUserId();
+
   return useMutation({
     mutationFn: (draft: DebtContributionDraft) => allocateDebtPayment(draft),
     onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: debtKeys.all }),
-        queryClient.invalidateQueries({ queryKey: ['transactions'] }),
-        queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
-        queryClient.invalidateQueries({ queryKey: ['analytics'] }),
-        queryClient.invalidateQueries({ queryKey: ['calculator'] }),
-      ]);
+      await invalidateDebtSurfaces(requireUserId(userId));
     },
   });
 }
 
 export function useUpdateDebtPaymentTransaction() {
+  const userId = useRequiredUserId();
+
   return useMutation({
     mutationFn: ({
       transactionId,
@@ -151,13 +153,7 @@ export function useUpdateDebtPaymentTransaction() {
       patch: Parameters<typeof updateDebtPaymentTransaction>[1];
     }) => updateDebtPaymentTransaction(transactionId, patch),
     onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: debtKeys.all }),
-        queryClient.invalidateQueries({ queryKey: ['transactions'] }),
-        queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
-        queryClient.invalidateQueries({ queryKey: ['analytics'] }),
-        queryClient.invalidateQueries({ queryKey: ['calculator'] }),
-      ]);
+      await invalidateDebtSurfaces(requireUserId(userId));
     },
   });
 }

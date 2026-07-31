@@ -21,6 +21,7 @@ import type {
   TransactionDraft,
   TransactionFilters,
   TransactionPage,
+  TransactionSummary,
   TransactionUpdate,
   UserPreferences,
 } from '../types/transactions.types';
@@ -55,6 +56,30 @@ function normalizeRecurringRuleDraftForInsert(draft: RecurringRuleDraft): Recurr
     ...draft,
     next_run_date: currentDate,
   };
+}
+
+type TransactionSummaryRpcRow = {
+  income_cents: number | string | null;
+  expense_cents: number | string | null;
+  net_cents: number | string | null;
+  transaction_count: number | string | null;
+};
+
+type UntypedRpcClient = {
+  rpc: (name: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
+};
+
+function integerCents(value: number | string | null | undefined): number {
+  const parsed = typeof value === 'number' ? value : Number(value ?? 0);
+  return Number.isSafeInteger(parsed) ? parsed : 0;
+}
+
+/**
+ * The generated database types cannot yet include the local-only RPCs. Keep the
+ * narrow cast here, rather than widening Supabase or generated database types.
+ */
+function localRpc(name: string, args: Record<string, unknown>) {
+  return (supabase as unknown as UntypedRpcClient).rpc(name, args);
 }
 
 export async function fetchTransactions(
@@ -102,6 +127,37 @@ export async function fetchTransactions(
     count: count ?? 0,
     page,
     pageSize,
+  };
+}
+
+export async function fetchTransactionSummary(
+  filters: TransactionFilters,
+): Promise<TransactionSummary> {
+  const parsedFilters = transactionFiltersSchema.parse(filters);
+  const searchTerm = parsedFilters.q ? sanitizeSearchTerm(parsedFilters.q) : null;
+  const { data, error } = await localRpc('get_transaction_summary', {
+    p_from: parsedFilters.from ?? null,
+    p_to: parsedFilters.to ?? null,
+    p_category: parsedFilters.category ?? null,
+    p_debt_id: parsedFilters.debt_id ?? null,
+    p_kind: parsedFilters.kind ?? null,
+    p_amount_min_cents:
+      parsedFilters.amountMin == null ? null : Math.round(parsedFilters.amountMin * 100),
+    p_amount_max_cents:
+      parsedFilters.amountMax == null ? null : Math.round(parsedFilters.amountMax * 100),
+    p_search: searchTerm || null,
+  });
+
+  if (error) raise(error, 'Unable to load transaction summary');
+  const row = Array.isArray(data) ? data[0] : data;
+  const summary = (row ?? {}) as TransactionSummaryRpcRow;
+
+  // Transfers intentionally contribute zero to Income, Expenses, and Net.
+  return {
+    income_cents: integerCents(summary.income_cents),
+    expense_cents: integerCents(summary.expense_cents),
+    net_cents: integerCents(summary.net_cents),
+    transaction_count: integerCents(summary.transaction_count),
   };
 }
 
@@ -161,70 +217,65 @@ export async function createTransaction(
   return requiredRow(data, 'Transaction was not created.');
 }
 
+export async function createQuickAddTransaction(
+  userId: string,
+  clientOperationId: string,
+  draft: TransactionDraft,
+): Promise<Transaction> {
+  void userId; // The RPC derives ownership from auth.uid(); retained for the feature API contract.
+  const parsed = transactionDraftSchema.parse(draft);
+  const { data, error } = await localRpc('create_quick_add_transaction', {
+    p_client_operation_id: clientOperationId,
+    p_amount_cents: parsed.amount_cents,
+    p_kind: parsed.kind,
+    p_category: parsed.category,
+    p_transaction_date: parsed.transaction_date,
+    p_description: parsed.description,
+    p_notes: parsed.notes ?? null,
+    p_goal_id: parsed.goal_id ?? null,
+    p_debt_id: parsed.debt_id ?? null,
+  });
+
+  if (error) raise(error, 'Unable to create quick-add transaction');
+  return requiredRow(data as Transaction | null, 'Quick-add transaction was not created.');
+}
+
 export async function updateTransaction(
   userId: string,
   transactionId: string,
   updates: TransactionUpdate,
 ): Promise<Transaction> {
+  void userId; // The RPC derives ownership from auth.uid(); retained for the feature API contract.
   const parsed = transactionUpdateSchema.parse(updates);
 
-  if (parsed.goal_id) {
-    if (!parsed.amount_cents || !parsed.transaction_date) {
-      throw new AppError(
-        'Goal contribution updates require an amount and transaction date.',
-        'VALIDATION_ERROR',
-        400,
-      );
-    }
-
-    const { data, error } = await supabase.rpc('update_goal_contribution_transaction', {
-      p_transaction_id: transactionId,
-      p_amount_cents: parsed.amount_cents,
-      p_transaction_date: parsed.transaction_date,
-      p_description: parsed.description ?? '',
-      p_notes: parsed.notes ?? undefined,
-    });
-
-    if (error) raise(error, 'Unable to update goal contribution');
-    return requiredRow(data, 'Goal contribution was not updated.');
+  if (
+    parsed.amount_cents == null ||
+    !parsed.kind ||
+    !parsed.category ||
+    !parsed.transaction_date ||
+    parsed.description == null
+  ) {
+    throw new AppError(
+      'Editing a transaction requires its amount, kind, category, date, and description.',
+      'VALIDATION_ERROR',
+      400,
+    );
   }
 
-  if (parsed.debt_id) {
-    if (!parsed.amount_cents || !parsed.transaction_date) {
-      throw new AppError(
-        'Debt payment updates require an amount and transaction date.',
-        'VALIDATION_ERROR',
-        400,
-      );
-    }
-
-    const { data, error } = await supabase.rpc('update_debt_payment_transaction', {
-      p_transaction_id: transactionId,
-      p_amount_cents: parsed.amount_cents,
-      p_transaction_date: parsed.transaction_date,
-      p_description: parsed.description ?? '',
-      p_notes: parsed.notes ?? undefined,
-    });
-
-    if (error) raise(error, 'Unable to update debt payment');
-    return requiredRow(data, 'Debt payment was not updated.');
-  }
-
-  const transactionUpdates = { ...parsed };
-  delete transactionUpdates.recurring_frequency;
-  delete transactionUpdates.recurring_start_date;
-  delete transactionUpdates.recurring_notes;
-
-  const { data, error } = await supabase
-    .from('transactions')
-    .update(transactionUpdates as TransactionUpdate)
-    .eq('id', transactionId)
-    .eq('user_id', userId)
-    .select()
-    .single();
+  const { data, error } = await localRpc('update_transaction_and_retarget', {
+    p_transaction_id: transactionId,
+    p_amount_cents: parsed.amount_cents,
+    p_kind: parsed.kind,
+    p_category: parsed.category,
+    p_transaction_date: parsed.transaction_date,
+    p_description: parsed.description,
+    p_notes: parsed.notes ?? null,
+    p_goal_id: parsed.goal_id ?? null,
+    p_debt_id: parsed.debt_id ?? null,
+  });
 
   if (error) raise(error, 'Unable to update transaction');
-  return requiredRow(data, 'Transaction was not updated.');
+  return requiredRow(data as Transaction | null, 'Transaction was not updated.');
 }
 
 export async function deleteTransaction(userId: string, transactionId: string): Promise<string> {

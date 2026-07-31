@@ -53,7 +53,7 @@ const FEATURES: LandingFeature[] = [
   {
     Icon: Gauge,
     label: 'Feel the momentum',
-    tagline: 'See progress, monthly gaps, and plan confidence update as your numbers change.',
+    tagline: 'See progress, monthly gaps, and projected timing update as your numbers change.',
   },
 ];
 
@@ -68,7 +68,7 @@ const HOW_IT_WORKS: LandingStep[] = [
   },
   {
     title: 'Your dashboard turns updates into momentum.',
-    body: 'Transactions, recurring rules, debts, and goals keep the date, gap, confidence, and next action current.',
+    body: 'Transactions, recurring rules, debts, and goals keep the date, gap, and next move current.',
   },
 ];
 

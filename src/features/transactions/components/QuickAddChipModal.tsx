@@ -8,12 +8,18 @@ import {
   TRANSACTION_KIND_OPTIONS,
 } from '../constants/categories';
 import { quickAddChipSchema } from '../schemas/transactions.schema';
-import type { QuickAddChip, SupportedTransactionKind } from '../types/transactions.types';
+import type { QuickAddChip, QuickAddTarget, SupportedTransactionKind } from '../types/transactions.types';
+
+type QuickAddGoalOption = { id: string; name: string };
+type QuickAddDebtOption = { id: string; name: string };
 
 type QuickAddChipModalProps = {
   isOpen: boolean;
   chip: QuickAddChip | null;
   isSubmitting: boolean;
+  activeGoals: QuickAddGoalOption[];
+  activeDebts: QuickAddDebtOption[];
+  activePriorityName?: string | null;
   serverError?: string;
   onClose: () => void;
   onDelete: (chip: QuickAddChip) => void;
@@ -26,6 +32,7 @@ type QuickAddChipFormState = {
   amount: string;
   kind: SupportedTransactionKind;
   category: string;
+  target: QuickAddTarget | null;
 };
 
 function centsToInputValue(cents: number): string {
@@ -51,6 +58,7 @@ function getInitialState(chip: QuickAddChip | null): QuickAddChipFormState {
       amount: centsToInputValue(chip.amount_cents),
       kind: chip.kind,
       category: chip.category,
+      target: chip.target ?? null,
     };
   }
 
@@ -60,6 +68,7 @@ function getInitialState(chip: QuickAddChip | null): QuickAddChipFormState {
     amount: '',
     kind: 'expense',
     category: 'food',
+    target: null,
   };
 }
 
@@ -75,6 +84,9 @@ function QuickAddChipModalContent({
   isOpen,
   chip,
   isSubmitting,
+  activeGoals,
+  activeDebts,
+  activePriorityName,
   serverError,
   onClose,
   onDelete,
@@ -103,6 +115,7 @@ function QuickAddChipModalContent({
         amount_cents: Math.abs(amountCents),
         kind: form.kind,
         category: form.category,
+        target: form.target ?? undefined,
       });
 
       await onSubmit(parsed);
@@ -169,16 +182,51 @@ function QuickAddChipModalContent({
         </label>
 
         <label className="transaction-form-field">
-          <span>Category</span>
+          <span>Category or target</span>
           <select
-            value={form.category}
-            onChange={(event) => setForm((current) => ({ ...current, category: event.target.value }))}
+            value={
+              form.target?.kind === 'active_priority'
+                ? 'target:active_priority'
+                : form.target?.kind === 'goal'
+                  ? `target:goal:${form.target.id}`
+                  : form.target?.kind === 'debt'
+                    ? `target:debt:${form.target.id}`
+                    : `category:${form.category}`
+            }
+            onChange={(event) => {
+              const value = event.target.value;
+              setForm((current) => {
+                if (value === 'target:active_priority') {
+                  return { ...current, category: 'savings', target: { kind: 'active_priority' } };
+                }
+                if (value.startsWith('target:goal:')) {
+                  return { ...current, category: 'savings', target: { kind: 'goal', id: value.slice(12) } };
+                }
+                if (value.startsWith('target:debt:')) {
+                  return { ...current, category: 'debt_payment', target: { kind: 'debt', id: value.slice(12) } };
+                }
+                return { ...current, category: value.slice(9), target: null };
+              });
+            }}
           >
+            <optgroup label="Categories">
             {TRANSACTION_CATEGORIES.map((category) => (
-              <option key={category.value} value={category.value}>
+              <option key={category.value} value={`category:${category.value}`}>
                 {category.label}
               </option>
             ))}
+            </optgroup>
+            <optgroup label="Targets">
+              <option value="target:active_priority">
+                Active priority{activePriorityName ? ` — ${activePriorityName}` : ''}
+              </option>
+              {activeGoals.map((goal) => (
+                <option key={goal.id} value={`target:goal:${goal.id}`}>{goal.name}</option>
+              ))}
+              {activeDebts.map((debt) => (
+                <option key={debt.id} value={`target:debt:${debt.id}`}>{debt.name}</option>
+              ))}
+            </optgroup>
           </select>
         </label>
 
