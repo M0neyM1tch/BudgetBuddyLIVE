@@ -1,12 +1,13 @@
 # Product/UX Follow-Ups 2 — Free-Plan Backup and Restore Runbook
 
 Date prepared: 2026-07-21
+Updated: 2026-07-31
 Workflow: hosted Supabase Free plan, native PostgreSQL clients, no Docker
-Status: **NOT EXECUTED — production migration is blocked**
+Status: **RELEASE CANDIDATE AND REHEARSAL-TARGET SECURITY PREREQUISITE COMPLETE; production backup/restore execution deferred**
 
 ## Purpose and hard boundary
 
-This runbook prepares a later, separately authorized manual logical backup, integrity check, restore rehearsal, and candidate-migration verification. It does not authorize project creation or reuse, credential access, a remote write, a backup, a restore, a migration-history repair, or a production migration.
+This runbook prepares a later, separately authorized manual logical backup, integrity check, restore rehearsal, and candidate-migration verification. The production-derived backup/restore workstream is deferred, not cancelled. The separately authorized 2026-07-31 rehearsal-target future-object security prerequisite is recorded below; it does not authorize credential access, backup, restore, application-object creation, migration-history repair, a candidate migration, or a production migration.
 
 Supabase automatically backs up Pro, Team, and Enterprise projects, while Free projects are directed to maintain manual off-site exports. PITR is a paid-plan add-on, Branching is a paid deployment feature, and managed Restore to a New Project requires a paid source with physical backups. An ordinary second Free project is independent infrastructure, not a Supabase Branch. The Free allowance is two active projects; a paused project does not authorize reuse or deletion. Sources: [Database Backups](https://supabase.com/docs/guides/platform/backups), [Branching](https://supabase.com/docs/guides/deployment/branching), [Restore to a new project](https://supabase.com/docs/guides/platform/clone-project), [Billing](https://supabase.com/docs/guides/platform/billing-on-supabase).
 
@@ -15,7 +16,8 @@ The Supabase CLI `db dump` path is not used: current CLI dumping is container-ba
 ## Frozen candidate and read-only baseline
 
 - Git branch: `Product/UX-Follow-Ups-2`
-- Git HEAD: `5a7f61a3131b127dfc1f265ebfeb3583d8298d7c`
+- Release-candidate Git HEAD: `e97ddb5b7d67582d9db29d5249cb4acc5c0860d7`
+- Release-candidate commit: `feat: complete Product UX Follow-Ups 2 release candidate`, pushed to `origin/Product/UX-Follow-Ups-2`; working tree clean at the checkpoint.
 - Merge base with `main`: `5a7f61a3131b127dfc1f265ebfeb3583d8298d7c`
 - Candidate migration `20260721194230_product_ux_follow_ups_2_debt_goal_sync.sql` SHA-256: `678834847D83DB8F3607B13AD49D9DFA51935143C54D268F6658692F9B964B40`
 - Candidate migration `20260721194410_product_ux_follow_ups_2_transaction_summary_and_retarget.sql` SHA-256: `E7CF5834475DA1904E196895B056823773494DFB3C00811D9D6E89FFC8650A75`
@@ -42,7 +44,33 @@ The signed-in Dashboard inventory completed read-only on 2026-07-22. This baseli
 - One active Edge Function uses legacy-JWT verification. Two custom and ten platform-default secret entries exist; no name, value, or digest was inspected. Withhold function deployment/invocation on the rehearsal target.
 - Installed platform integrations are Cron, Data API, and Vault. Project-level GitHub/Vercel/AWS private connections, Auth hooks, and custom domains are absent.
 
-This settings baseline is `PASS`. Later read-only catalog work froze the durable Auth allow-list, compatibility fingerprint, role mapping, app-owned event trigger, and canonical privilege comparisons described in section 4.1. No target configuration, credential access, artifact creation, or restore is implied.
+This source-settings baseline is `PASS`. Later read-only catalog work froze the durable Auth allow-list, compatibility fingerprint, role mapping, app-owned event trigger, and canonical privilege comparisons described in section 4.1. The target-only security prerequisite below changed no source or production setting and involved no credential access, artifact creation, or restore.
+
+### Rehearsal target security prerequisite completed 2026-07-31
+
+`BudgBeacon-Rehearsal` (`gwloyvfkrxzgqnlnlcor`, `us-east-2`) is temporarily designated for disposable synthetic-only development and migration testing. It is distinct from production `BudgetBuddy-V2` (`cebykmbauxbucvforwzj`) and inactive legacy `BudgetBuddy` (`yvsizxnfqkkazqnwbgnc`).
+
+Before the change, the target had zero public application objects, Auth users/identities, migration-ledger rows, Storage objects, Vault secrets, Edge Functions, Realtime publication members, cron jobs, database webhooks, or application outbound behavior. Future `postgres`-owned public tables, sequences, and functions automatically granted broad privileges to `anon`, `authenticated`, and `service_role`.
+
+The exact current Supabase-supported existing-project opt-in was executed in one transaction:
+
+```sql
+alter default privileges for role postgres in schema public
+  revoke select, insert, update, delete on tables from anon, authenticated, service_role;
+
+alter default privileges for role postgres in schema public
+  revoke execute on functions from anon, authenticated, service_role;
+
+alter default privileges for role postgres in schema public
+  revoke usage, select on sequences from anon, authenticated, service_role;
+
+alter default privileges for role postgres in schema public
+  revoke execute on functions from public;
+```
+
+After the change, future `postgres`-owned public tables no longer receive automatic Data API CRUD grants, future functions grant execution only to `postgres`, and future sequences no longer grant `USAGE` or `SELECT` to client/API roles. Existing `public` schema usage remained unchanged. Target-managed `supabase_admin` defaults were not changed, and the fingerprint of every default ACL outside `postgres`/`public` remained `a5bd6f4b602ec50c79fb35972bb30ace`. PostgreSQL's residual non-Data-API defaults (`Dxtm` on tables and `UPDATE` on sequences) were left unchanged because the task followed the exact Supabase-supported opt-in method rather than broadening the authorized write.
+
+All empty/isolation checks remained zero after the change, the migration and Edge Function lists remained empty, and the target security advisor returned no findings. This prerequisite is not an RLS substitute: every future application table must still receive deliberate minimum grants, RLS enablement, and reviewed policies in the same migration. During this 2026-07-31 task, no production credential, backup, restore, application migration, production schema, or production data was accessed or executed; no rehearsal-target application schema/data or Auth user was created.
 
 ## 1. Freeze and identify the release candidate
 
@@ -55,7 +83,7 @@ This settings baseline is `PASS`. Later read-only catalog work froze the durable
 ## 2. Select a restore target with explicit approval
 
 1. Ask the owner to identify an available ordinary Free-project slot or explicitly approve creating a new ordinary Free project.
-   - 2026-07-22 result: after the connector reported one healthy active project and one inactive legacy project, quoted one new ordinary project at exactly `$0/month`, and completed its formal zero-cost acknowledgement, the owner explicitly authorized exactly one ordinary project named `BudgBeacon-Rehearsal` in `us-east-2`. The connector created it once; it became healthy on the Free plan. The inactive legacy project was not reused or changed.
+   - 2026-07-22 result: after the connector reported one healthy active project and one inactive legacy project, quoted one new ordinary project at exactly `$0/month`, and completed its formal zero-cost acknowledgement, the owner explicitly authorized exactly one ordinary project named `BudgBeacon-Rehearsal` in `us-east-2`. The connector created it once as `gwloyvfkrxzgqnlnlcor`; it became healthy on the Free plan. The inactive legacy project was not reused or changed.
 2. Creating a project is a remote write and needs explicit approval immediately before the action.
 3. Reusing any existing project requires the owner to identify it and explicitly confirm that its contents may be destroyed. Never assume the inactive `BudgetBuddy` project is disposable.
 4. Keep the restore project isolated. Do not connect Cloudflare, `budg.ca`, production redirects, production environment variables, production email delivery, or external integrations.
@@ -140,7 +168,7 @@ Current exact proposal, still awaiting owner approval:
 - Restore Auth data from exactly `auth.users` and `auth.identities`. The source has 3 users, 3 email identities, and 0 orphan identities. Source/target compatibility matches for columns (`fa191cc0f72038cd58cc33bd7c20069c`), 6 constraints (`c7385b453077059d647cc1eede7e2327`), 19 indexes (`5752bf95965e4c62bf7a021c42b8e82d`), and the absence of non-custom user triggers. Exclude sessions, refresh tokens, session-bound MFA AMR claims, one-time tokens, and every other transient Auth table; users must reauthenticate.
 - Restore no role definitions or memberships. Exclude the source-only operational login `cli_login_postgres`; map `postgres`, `authenticated`, `service_role`, and other Supabase-managed roles to their existing target roles.
 - Freeze canonical source comparisons: table ACL `effed6368c1c73a40d4d78fae7769205`, function ACL `25edf70b9f4a71f1517af9abc6425c26`, schema ACL `eded11b98a2e6564fa7a856a22b8c814`, and default privileges `b48c23e9e959620e189a5de6d9dcb29b`.
-- Before creating any app table, separately approve turning the fresh target's Data API automatic-exposure setting off. Its current canonical default privileges (`61e7853a5d07dbca3edf75b38ac61b96`) are broader than the source because auto-exposure is on. Recheck the resulting target defaults before restore and preserve target-managed `supabase_admin` defaults.
+- The fresh target's future-object Data API security prerequisite was separately authorized and completed on 2026-07-31. Future `postgres`-owned tables/functions no longer receive automatic CRUD/execute grants; target-managed `supabase_admin` defaults remain unchanged. Before any app table is created, the corresponding application migration must still add minimum explicit grants, enable RLS, and add reviewed policies deliberately.
 - Create one exported snapshot and derive separate schema, durable Auth data, app data, migration-ledger, custom Auth trigger, RLS event-trigger, ACL/default-privilege, aggregate-evidence, and checksum artifacts. A roles-only dump is evidence only and must never be restored wholesale.
 
 ### 4.2 Require one coherent database snapshot
@@ -267,7 +295,7 @@ Mark each item exactly `PASS`, `FAIL`, or `NOT TESTED`. Any `FAIL` or security-c
 | `20260707193257` SQL effects comparison | PASS | Remediation report; comparison only |
 | `20260707193257` target ledger-repair approval and rehearsal | NOT TESTED | The approved empty target exists, but no restore, repair, migration, or test write is authorized. |
 | Explicit restore-target creation/reuse approval | PASS | Owner authorized one ordinary Free project with exact organization/name/region/cost; one target was created and no existing project was reused. |
-| Initial rehearsal-target provisioning and isolation baseline | PASS | Healthy PostgreSQL 17.6 target; zero public app tables/functions/policies/triggers, zero Auth users/identities, zero Storage/Vault usage, zero Edge Functions, no cron/`pg_net`/queues/webhooks, zero Realtime publication members, and no external project connection. Data API automatic exposure is currently on and must be disabled under a separate approval before app-table creation; Realtime defaults remain unchanged. |
+| Initial rehearsal-target provisioning and isolation baseline | PASS | Healthy PostgreSQL 17.6 target; zero public app tables/functions/policies/triggers, zero Auth users/identities, zero migration-ledger rows, zero Storage/Vault usage, zero Edge Functions, no cron/`pg_net`/queues/webhooks, zero Realtime publication members, and no external project connection. Future-object Data API exposure was disabled and reverified on 2026-07-31; Realtime defaults remain unchanged. |
 | PostgreSQL 17+ native clients verified | PASS | Approved absolute `pg_dump`, `pg_restore`, and `psql` binaries report 17.10. PostgreSQL 16.10 and PATH are unchanged; no PostgreSQL 17 data directory or service, pgAdmin, or Stack Builder was installed. |
 | Production credential access explicitly authorized | NOT TESTED | |
 | Exact database/Auth/roles/managed-schema backup scope approved | NOT TESTED | |
@@ -277,7 +305,7 @@ Mark each item exactly `PASS`, `FAIL`, or `NOT TESTED`. Any `FAIL` or security-c
 | Backup artifacts non-empty and listable/readable | NOT TESTED | |
 | SHA-256 checksums and encrypted sanitized manifest complete | NOT TESTED | |
 | Restore succeeded fail-fast on approved target | NOT TESTED | |
-| Outbound behavior remained disabled/withheld | NOT TESTED | |
+| Outbound behavior remained disabled/withheld | PASS | Target has no application triggers, Data API pre-request hook, Edge Function, cron/`pg_net`, Realtime publication member, webhook, or configured external application connection. Recheck before each later write phase. |
 | Schema/function/trigger/constraint equivalence | NOT TESTED | |
 | RLS/grant/default-privilege equivalence | NOT TESTED | |
 | Migration-ledger and extension equivalence | NOT TESTED | |
@@ -290,4 +318,4 @@ Mark each item exactly `PASS`, `FAIL`, or `NOT TESTED`. Any `FAIL` or security-c
 | Fresh final backup/checksum and aggregate watermark | NOT TESTED | |
 | Forward-disable/corrective and full-restore reconciliation plans approved | NOT TESTED | |
 
-Current verdict: **BLOCKED**. No backup or restore rehearsal has occurred, and no production migration may be applied.
+Current verdict: **READY FOR A SEPARATELY AUTHORIZED CLEAN SYNTHETIC BASELINE, but production-derived backup/restore execution remains deferred and no production migration may be applied.**

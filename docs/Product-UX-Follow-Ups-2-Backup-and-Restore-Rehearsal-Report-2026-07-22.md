@@ -1,34 +1,37 @@
 # Product/UX Follow-Ups 2 — Backup and Restore Rehearsal Report
 
 Date: 2026-07-22
+Updated: 2026-07-31
 Branch: `Product/UX-Follow-Ups-2`
-Result: **BLOCKED pending owner approval of the frozen scope, artifact custody, target configuration, and credential/export phases — rehearsal target created, no backup or restore action started**
+Result: **RELEASE CANDIDATE CHECKPOINT AND REHEARSAL-TARGET SECURITY PREREQUISITE COMPLETE; production-derived backup/restore execution remains deferred**
 
 ## Executive result
 
-The four SQL artifacts used by this rehearsal were hash-frozen and the available read-only hosted inventory was refreshed. The two candidate migration hashes still match the approved runbook. The active source remains healthy on the Free plan in `us-east-2` and runs PostgreSQL 17.6. The broader dirty worktree is not claimed as a fully hash-frozen release candidate.
+The complete Product/UX Follow-Ups 2 release candidate is committed and pushed on `Product/UX-Follow-Ups-2` at `e97ddb5b7d67582d9db29d5249cb4acc5c0860d7` with message `feat: complete Product UX Follow-Ups 2 release candidate`. The working tree was clean at that checkpoint and the upstream is `origin/Product/UX-Follow-Ups-2`.
 
-The recovery rehearsal advanced through the separately authorized creation of one isolated ordinary Free rehearsal project and a read-only initial target inventory. It did not advance to production credential access, backup creation, target configuration/preparation, restore, ledger repair, candidate migration application, SQL verification, type generation, or application release gates. The database/catalog portion of Phase A is refreshed and passes its aggregate-only checks. EDB-certified PostgreSQL 17.10 command-line tools are installed side-by-side with PostgreSQL 16.10 and pass the native-client compatibility gate.
+The production-derived backup/restore rehearsal is deferred, not cancelled. `BudgBeacon-Rehearsal` is temporarily designated as a disposable synthetic-only development and migration-testing target. On 2026-07-31, a separately authorized security prerequisite changed only future `postgres`-owned object defaults in `public`; it did not create an application object, apply a migration, create Auth data, restore schema/data, or access a production credential, backup, or row.
 
-The owner explicitly authorized creation of exactly one ordinary project named `BudgBeacon-Rehearsal` in `us-east-2` in the `BudgetBuddy` organization at the confirmed cost of `$0/month`. The project was created once and became healthy. The inactive legacy project remained untouched. The sanitized, read-only source and initial-target settings inventories are complete. Credential access, backup, target preparation/configuration, restore, migration repair, candidate migrations, verification suites, cleanup, and production action remain separately gated.
+The owner explicitly authorized creation of exactly one ordinary project named `BudgBeacon-Rehearsal` in `us-east-2` in the `BudgetBuddy` organization at the confirmed cost of `$0/month`. The project was created once and became healthy. The inactive legacy project remained untouched. The sanitized source and target inventories are complete, and the target future-object security prerequisite is now complete. Credential access, backup, restore, migration repair, candidate migrations, synthetic baseline creation, verification suites, cleanup, and production action remain separately gated.
 
 ## Authorization record
 
-The owner authorized this bounded local backup/restore-rehearsal task and read-only source discovery, separately authorized the EDB-certified PostgreSQL 17.10 Windows x86-64 Command Line Tools installation at `C:\Program Files\PostgreSQL\17`, and then explicitly authorized creation of exactly one ordinary Free project named `BudgBeacon-Rehearsal` in `us-east-2` in the `BudgetBuddy` organization at `$0/month`. The creation authorization covered no credential, backup, restore, configuration, migration, test, production, deployment, or cleanup action. No approval was requested or obtained for any of the following later mutation or credential boundaries:
+The owner authorized this bounded local backup/restore-rehearsal task and read-only source discovery, separately authorized the EDB-certified PostgreSQL 17.10 Windows x86-64 Command Line Tools installation at `C:\Program Files\PostgreSQL\17`, and then explicitly authorized creation of exactly one ordinary Free project named `BudgBeacon-Rehearsal` in `us-east-2` in the `BudgetBuddy` organization at `$0/month`.
+
+On 2026-07-31, the owner separately authorized only disabling automatic Data API exposure for future application objects, correcting the corresponding future-object default privileges, and recording the verified result locally. That authorization did not include any of the following:
 
 - production database credential access;
-- target preparation, restore, extension/configuration changes, `ANALYZE`, or any other remote write;
+- application-table/function creation, schema/data restore, extension enablement, `ANALYZE`, or any other target write;
 - migration-history repair;
 - either candidate migration;
 - either rollback-only SQL verification suite;
 - Auth test-user creation;
-- restore-target cleanup, pause, deletion, or repurposing.
+- restore-target cleanup, pause, deletion, or final disposition.
 
 No existing project was treated as disposable. The inactive legacy project was not resumed, paused, inspected for data, cleared, repurposed, or changed. Destructive reuse is not proposed.
 
 ## SQL artifact freeze
 
-- HEAD: `5a7f61a3131b127dfc1f265ebfeb3583d8298d7c`
+- Release-candidate HEAD: `e97ddb5b7d67582d9db29d5249cb4acc5c0860d7`
 - Merge base with `main`: `5a7f61a3131b127dfc1f265ebfeb3583d8298d7c`
 - Candidate `20260721194230_product_ux_follow_ups_2_debt_goal_sync.sql`: `678834847D83DB8F3607B13AD49D9DFA51935143C54D268F6658692F9B964B40`
 - Candidate `20260721194410_product_ux_follow_ups_2_transaction_summary_and_retarget.sql`: `E7CF5834475DA1904E196895B056823773494DFB3C00811D9D6E89FFC8650A75`
@@ -37,7 +40,7 @@ No existing project was treated as disposable. The inactive legacy project was n
 
 The two candidate hashes match the frozen runbook. Any later edit to either candidate invalidates restored-copy evidence and requires a new owner-confirmed freeze plus repeated verification.
 
-The complete tracked diff and all untracked implementation, documentation, migration, and SQL-test files were inspected. Existing uncommitted work was preserved. Only the two candidate migrations and two rollback-only SQL suites were hash-frozen in this run; no full-worktree manifest is claimed. No branch switch, pull, merge, rebase, reset, restore, checkout, stash, clean, commit, push, PR, or deployment occurred.
+The complete tracked and untracked Product/UX Follow-Ups 2 candidate was reviewed for scope and secrets, validated, committed, and pushed as the release-candidate checkpoint above. No merge, rebase, force-push, pull request, deployment, or Supabase action occurred during that Git checkpoint.
 
 ## Tool and platform versions
 
@@ -101,7 +104,7 @@ The initial target inventory was read-only and sanitized:
 - Default database schemas include Auth, Extensions, GraphQL/GraphQL Public, Public, Realtime, Storage, and Vault plus platform/system schemas. Public contains 0 tables, 0 policies, 0 functions, 0 user triggers, and 0 table grants.
 - Auth contains 0 users and 0 identities. Email is the only enabled provider; signup and email confirmation are enabled; manual linking and anonymous sign-ins are disabled. The Site URL is the platform local-development default and there are 0 redirect allow-list entries, so no production redirect was copied.
 - Email delivery uses the built-in provider; custom SMTP is disabled. Phone/SMS sign-in is disabled. Thirteen default Auth email/notification template categories exist; no template body or addressing value was inspected.
-- Data API is enabled for `graphql_public` and `public`. The new-project setting currently automatically exposes new tables; there are no public application tables, functions, or data yet. This default must be reviewed under a separate target-configuration approval before restore; grants and RLS remain separate controls.
+- Data API is enabled for `graphql_public` and `public`. At the initial baseline, future `postgres`-owned objects received broad automatic API-role defaults. On 2026-07-31, the Supabase-supported future-object default-privilege revokes were applied and verified; grants and RLS remain separate controls.
 - Realtime service is enabled with public channels allowed at platform defaults, but its sole publication has 0 members and no application data exists.
 - Edge Functions: 0 deployed functions. The secrets page shows 1 target-generated/custom-row entry and 10 platform-default entries; no name, value, or digest was inspected, and no production secret was imported.
 - Storage: 0 buckets and 0 objects. Vault: 0 secrets. Database webhooks: 0. Cron/`pg_net`/queues: not installed and no application job or outbound behavior exists.
@@ -109,7 +112,21 @@ The initial target inventory was read-only and sanitized:
 - Project integrations: no GitHub repository, Vercel project, AWS private connection, Auth hook, or custom domain is configured. Cloudflare and `budg.ca` are not connected.
 - Initial security and performance advisor counts: 0 / 0.
 
-This proves initial target isolation as `PASS`. It does not authorize changing the Data API default, Realtime defaults, extensions, roles, grants, Auth settings, or any other target configuration.
+This proves initial target isolation as `PASS`. A later authorization covered only the future-object Data API/default-privilege prerequisite described below; it did not authorize changes to Realtime defaults, extensions, managed roles/objects, Auth settings, application objects, schema, or data.
+
+### 2026-07-31 synthetic-development security prerequisite
+
+- Target identity: `BudgBeacon-Rehearsal`, project reference `gwloyvfkrxzgqnlnlcor`, `us-east-2`, `ACTIVE_HEALTHY`, created 2026-07-22. The same organization separately lists production `BudgetBuddy-V2` as `cebykmbauxbucvforwzj` and inactive legacy `BudgetBuddy` as `yvsizxnfqkkazqnwbgnc`; neither non-target reference was used for a write.
+- Before-state isolation: 0 public application tables, functions, RLS policies, or triggers; 0 Auth users or identities; 0 migration-ledger rows; 0 Storage buckets or objects; 0 Vault secrets; 0 Edge Functions; 0 Realtime publication members; no `pg_cron` or `pg_net` installation, no database webhook trigger, no Data API pre-request hook, and no application outbound behavior.
+- Before-state schema ACL: `PUBLIC`, `anon`, `authenticated`, `authenticator`, `postgres`, and `service_role` had `USAGE` on `public`; only `postgres` among the application/API roles had `CREATE`. `supabase_admin` also had managed `CREATE` capability and was deliberately excluded from the change.
+- Before-state `postgres` defaults: `anon`, `authenticated`, and `service_role` received table ACL `arwdDxtm`, sequence ACL `rwU`, and function `EXECUTE`; future functions did not need an additional explicit `PUBLIC` grant because the existing explicit ACL already replaced the built-in default.
+- Supported method: the current Supabase “Securing your API” guidance prescribes four `ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public` revokes—table `SELECT/INSERT/UPDATE/DELETE`, function `EXECUTE` from `anon/authenticated/service_role`, sequence `USAGE/SELECT`, and function `EXECUTE` from `PUBLIC`.
+- Change performed: exactly those four statements were executed in one transaction against project reference `gwloyvfkrxzgqnlnlcor`. No migration mechanism was used, so no migration-ledger row was created.
+- After-state `postgres` defaults: future functions grant `EXECUTE` only to `postgres`; future tables no longer grant Data API CRUD to `anon`, `authenticated`, or `service_role`; future sequences no longer grant `USAGE` or `SELECT` to those roles. PostgreSQL's residual non-Data-API defaults (`Dxtm` on tables and `UPDATE` on sequences) were not broadened or altered beyond the exact Supabase-supported opt-in method.
+- Managed-platform preservation: the fingerprint of all default ACLs outside `postgres`/`public` remained `a5bd6f4b602ec50c79fb35972bb30ace`; all `supabase_admin` defaults and all schema-usage grants remained unchanged. Existing managed schemas and objects were not altered.
+- After-state isolation remained identical: all application/Auth/Storage/Vault/Realtime counts stayed 0; public tables, migration ledger, and Edge Function lists remained empty; `pg_cron` and `pg_net` remained absent; the target security advisor returned 0 findings.
+
+The intended automatic Data API exposure for future `postgres`-owned public application tables and functions is removed. This is not a substitute for RLS: every future exposed table still requires deliberate grants, RLS enablement, and reviewed policies in the same migration.
 
 ### Read-only backup-scope refinement
 
@@ -122,7 +139,7 @@ Post-creation catalog checks refined the exact source/target treatment without i
 - The source's only nonstandard login role is `cli_login_postgres`. It owns no schema, relation, or function and has no explicit table, function, or default-privilege grant; treat it as an ephemeral operational login and exclude it from restore. Map the target's Supabase-managed roles instead of recreating any managed role or password.
 - Source and target managed membership sets differ because the fresh target includes current managed Realtime memberships. This is an expected platform baseline difference: preserve the target-managed memberships, restore no source managed-role membership wholesale, and compare only the reviewed app privilege contract.
 - Canonical source object grants are frozen as 30 grouped table ACL rows (`effed6368c1c73a40d4d78fae7769205`) and 38 grouped function ACL rows (`25edf70b9f4a71f1517af9abc6425c26`). `authenticated` has CRUD on 9 tables and SELECT-only on `user_roles`; `service_role` has full table privileges except CRUD is intentionally absent on `profiles` and `user_roles`. Function execution is signature-specific; `anon` and `PUBLIC` have no application-object grants. There are 0 column-specific ACLs and 0 app sequences.
-- Canonical source schema ACL is 9 rows (`eded11b98a2e6564fa7a856a22b8c814`), and canonical source default privileges are 72 expanded rows (`b48c23e9e959620e189a5de6d9dcb29b`). The fresh target differs materially: its Data API auto-exposure setting is on, its canonical default privileges are 96 expanded rows (`61e7853a5d07dbca3edf75b38ac61b96`), and new `postgres`-owned public tables/functions would receive broad API-role defaults. Auto-exposure must be turned off under a separate target-configuration approval and the resulting defaults re-verified before any app table is created.
+- Canonical source schema ACL is 9 rows (`eded11b98a2e6564fa7a856a22b8c814`), and canonical source default privileges are 72 expanded rows (`b48c23e9e959620e189a5de6d9dcb29b`). The fresh target initially granted future `postgres`-owned public tables/functions broad API-role access. The 2026-07-31 prerequisite removed table CRUD and function execution exposure through the documented Supabase method while preserving target-managed `supabase_admin` defaults. Any future application migration must still add minimum explicit grants, enable RLS, and add reviewed policies deliberately.
 - `public.rls_auto_enable()` is classified as an app-owned security control: `postgres`-owned, `SECURITY DEFINER`, `search_path=pg_catalog`, executable only by `postgres`. The enabled `ensure_rls` event trigger invokes it after public-table creation. Preserve the pair in a separate reviewed artifact and install it only after the curated schema/data restore, while verifying all 10 restored tables already have RLS enabled and not forced.
 
 These checks resolve the durable Auth allow-list, Auth column compatibility, custom-role disposition, app-owned event-trigger classification, and canonical privilege comparisons. Artifact custody and the separately authorized target-configuration/credential/write phases still block any backup or restore.
@@ -152,7 +169,7 @@ This is the sanitized planning classification only. `UNVERIFIED` and `NOT TESTED
 No step below is authorized yet. The sequence is the approval basis for the next phases:
 
 1. Select an encrypted location outside the repository and synchronization folders, a key custodian, retention period, artifact-deletion method, and rehearsal-target disposition. Create no artifact until that custody record is approved.
-2. Under a target-configuration-only approval, turn target Data API automatic exposure of new tables off and recheck the target's canonical default privileges. Keep production redirects, SMTP, Edge Functions/secrets, cron, webhooks, Realtime publication members, and every external integration withheld.
+2. **Completed 2026-07-31:** under a target-configuration-only approval, remove automatic Data API grants for future `postgres`-owned public tables/functions and verify the result. Production redirects, SMTP, Edge Functions/secrets, cron, webhooks, Realtime publication members, and every external integration remain withheld.
 3. Under a separate production-credential/read-only-export approval, use only the absolute PostgreSQL 17.10 binaries and an interactively supplied password. Connect through the direct endpoint or session pooler on port 5432, never the transaction pooler on 6543; do not place credentials in command arguments, files, logs, chat, or the repository.
 4. Open one coordinator transaction as `REPEATABLE READ, READ ONLY`, export its snapshot, and keep it open. Freeze sanitized pre-export role/settings/object fingerprints.
 5. From that snapshot, create: a signed scope manifest; a schema-only custom archive for the six public enums, 10 public tables, 14 ordinary public functions, `private.handle_new_user()`, constraints, indexes, 9 app table triggers, 37 policies, RLS flags, and exact ownership; an `auth.users`/`auth.identities` data artifact only; an exact 10-table app-data artifact; a `supabase_migrations.schema_migrations` ledger artifact; separate reviewed artifacts for `on_auth_user_created`, the fifteenth public function `rls_auto_enable()` plus `ensure_rls`, and ACL/default privileges; sanitized aggregate/fingerprint evidence; and SHA-256 checksums. A roles-only dump is evidence only and is never restored wholesale.
@@ -174,6 +191,7 @@ Current official guidance confirms that Free projects require manual off-site lo
 | Current database/catalog source inventory | **PASS** | Counts, semantic preflights, trigger contract, extensions, ledger, RLS/policies, and opaque fingerprints refreshed read-only. |
 | Current non-database project settings inventory | **PASS** | Signed-in Dashboard read-only inventory completed with sanitized presence/state/count evidence only. |
 | Target approval/creation or reuse | **PASS** | Explicit one-project authorization recorded; one ordinary Free target created in the approved organization/name/region at `$0/month`; no existing project reused. |
+| Target future-object Data API security prerequisite | **PASS** | Exact Supabase-supported `postgres`/`public` default-privilege revokes applied and verified; managed ACL fingerprint unchanged; no application object or migration created. |
 | Production credential access | **NOT TESTED** | No credential accessed. |
 | Backup artifacts and checksums | **NOT TESTED** | No artifacts created. |
 | Encryption at rest and retention policy | **NOT TESTED** | No artifact or policy approved. |
@@ -184,7 +202,7 @@ Current official guidance confirms that Free projects require manual off-site lo
 | Schema/security rollback-only suite | **NOT TESTED** | Not executed. |
 | Allocation-behavior rollback-only suite | **NOT TESTED** | Not executed. |
 | Residual synthetic-state checks | **NOT TESTED** | No synthetic state created. |
-| Post-migration advisors | **NOT TESTED** | Only the source baseline was refreshed. |
+| Post-migration advisors | **NOT TESTED** | No migration was applied. The target security advisor was run after the configuration prerequisite and returned 0 findings. |
 | Generated TypeScript types | **NOT TESTED** | No verified restore project exists. |
 | Application gates | **NOT TESTED** | Deferred until verified restored-copy types exist. |
 
@@ -199,14 +217,14 @@ The rehearsal target exists, is healthy, and remains active and empty. No cleanu
 ## Remaining blockers
 
 1. Select an encrypted external artifact location, retention period, encryption-key custodian, post-rehearsal cleanup expectation, and target pause/delete/retain preference.
-2. Separately approve the target-configuration-only phase that disables automatic Data API exposure before any app table is created and keeps all outbound integrations withheld.
-3. Approve the exact native artifact sequence above, then separately approve production credential use immediately before the read-only export; project creation did not authorize credential access or backup creation.
+2. The target future-object Data API security prerequisite is complete; keep all outbound integrations withheld during later synthetic development and restore phases.
+3. When the deferred production-derived rehearsal resumes, approve the exact native artifact sequence and separately approve production credential use immediately before the read-only export.
 4. After artifact verification, separately approve target database writes/restoration. Migration/test execution and target cleanup remain later, independent approvals.
 
 Any security-critical `NOT TESTED` or any `FAIL` keeps the recovery gate blocked. This report does not recommend applying the candidate migrations to production.
 
 ## Production safety confirmation
 
-Production received read-only metadata, catalog, advisor, and aggregate-count queries only. The only remote write was the separately authorized creation of one ordinary empty rehearsal project. No production DDL, DML, migration, migration-history repair, configuration change, Auth-user creation, restore, or test execution occurred. The rehearsal target received no configuration change, extension enablement, schema/data restore, migration, user, function, cron job, webhook, or test. No frontend or Edge Function was deployed. Cloudflare and `budg.ca` were not changed or pointed at the rehearsal target.
+Production received no write. During this 2026-07-31 task, no production credential, backup, restore, application migration, production schema, or production data was accessed or executed. Remote writes were confined to the previously authorized rehearsal-project creation and the 2026-07-31 `postgres`/`public` future-default-privilege prerequisite on that rehearsal project. The target received no application object, extension enablement, schema/data restore, migration, user, function, cron job, webhook, or test. No frontend or Edge Function was deployed. Cloudflare and `budg.ca` were not changed or pointed at the rehearsal target.
 
 **Production was not mutated.**
