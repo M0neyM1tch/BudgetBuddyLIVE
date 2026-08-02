@@ -1,9 +1,9 @@
 # Product/UX Follow-Ups 2 — Backup and Restore Rehearsal Report
 
 Date: 2026-07-22
-Updated: 2026-07-31
+Updated: 2026-08-02
 Branch: `Product/UX-Follow-Ups-2`
-Result: **RELEASE CANDIDATE CHECKPOINT AND REHEARSAL-TARGET SECURITY PREREQUISITE COMPLETE; production-derived backup/restore execution remains deferred**
+Result: **RELEASE CANDIDATE CHECKPOINT, REHEARSAL SECURITY PREREQUISITE, AND CLEAN PRE-CANDIDATE REPOSITORY BASELINE COMPLETE; production-derived backup/restore execution remains deferred**
 
 ## Executive result
 
@@ -11,7 +11,9 @@ The complete Product/UX Follow-Ups 2 release candidate is committed and pushed o
 
 The production-derived backup/restore rehearsal is deferred, not cancelled. `BudgBeacon-Rehearsal` is temporarily designated as a disposable synthetic-only development and migration-testing target. On 2026-07-31, a separately authorized security prerequisite changed only future `postgres`-owned object defaults in `public`; it did not create an application object, apply a migration, create Auth data, restore schema/data, or access a production credential, backup, or row.
 
-The owner explicitly authorized creation of exactly one ordinary project named `BudgBeacon-Rehearsal` in `us-east-2` in the `BudgetBuddy` organization at the confirmed cost of `$0/month`. The project was created once and became healthy. The inactive legacy project remained untouched. The sanitized source and target inventories are complete, and the target future-object security prerequisite is now complete. Credential access, backup, restore, migration repair, candidate migrations, synthetic baseline creation, verification suites, cleanup, and production action remain separately gated.
+On 2026-08-02, the clean repository baseline through `20260707193257` was reconstructed on `BudgBeacon-Rehearsal` from 23 unchanged tracked migration files. The two Product/UX Follow-Ups 2 candidate migrations remain unapplied. No Auth user, identity, synthetic application row, production row, backup, or restore was created or accessed.
+
+The owner explicitly authorized creation of exactly one ordinary project named `BudgBeacon-Rehearsal` in `us-east-2` in the `BudgetBuddy` organization at the confirmed cost of `$0/month`. The project was created once and became healthy. The inactive legacy project remained untouched. The sanitized source and target inventories are complete, the target future-object security prerequisite is complete, and the clean pre-candidate repository baseline is complete. Production credential access, backup, restore, migration repair, candidate migrations, synthetic seeding, verification suites, cleanup, and production action remain separately gated.
 
 ## Authorization record
 
@@ -183,6 +185,62 @@ Before Phase C, the external manifest must enumerate every included/excluded sch
 
 Current official guidance confirms that Free projects require manual off-site logical exports; Storage object bytes and platform services are outside a database dump; Auth, managed-schema changes, roles, and migration history need explicit treatment; and Vault ciphertext is not portable to an ordinary new project without a separately controlled root-key transfer. The official logical-backup path documented by Supabase is container-backed, so this no-Docker task must prove an equivalent native PostgreSQL artifact sequence rather than claiming that an unrestricted dump is complete.
 
+## 2026-08-02 clean pre-candidate repository baseline
+
+The baseline was built only on `BudgBeacon-Rehearsal` (`gwloyvfkrxzgqnlnlcor`, `us-east-2`, PostgreSQL 17.6). Immediately before each write, the isolated CLI work directory remained linked to that project. Production `BudgetBuddy-V2` (`cebykmbauxbucvforwzj`) and legacy `BudgetBuddy` (`yvsizxnfqkkazqnwbgnc`) remained distinct and received no write. Git remained on `Product/UX-Follow-Ups-2` at `ac64e92dbc16b7a93aa91a6830df746147085425` with a clean, upstream-synchronized starting tree.
+
+### Environmental bootstrap prerequisite
+
+The repository migration chain is not independently self-contained: `20260613031223_phase1_hardening.sql` depends on `public.rls_auto_enable()` and the `ensure_rls` event trigger, but no tracked historical migration creates them. A read-only production catalog query independently recaptured `pg_get_functiondef()`, owner, security mode, fixed search path, complete ACL, and event-trigger metadata. Those results matched the owner-supplied production contract materially and semantically.
+
+An exact production-equivalent function and event trigger were therefore installed on rehearsal only, outside `supabase_migrations.schema_migrations`. The function is `postgres`-owned, `SECURITY DEFINER`, has exactly `search_path=pg_catalog`, and has ACL `{postgres=X/postgres}`. `ensure_rls` is enabled for origin (`O`), fires at `ddl_command_end`, has exactly the tags `CREATE TABLE`, `CREATE TABLE AS`, and `SELECT INTO`, and targets `public.rls_auto_enable()`. The bootstrap installation left the ledger at its single existing `20260612000000` row. No historical migration was edited, and `20260612000000` was neither rerun nor manually rerecorded.
+
+### Baseline migration manifest and execution
+
+Each migration was introduced alone into a temporary isolated CLI work directory, checked with `supabase db push --dry-run`, and then applied with `supabase db push --yes`. Every dry run named exactly one intended file. Every apply completed and its legitimate ledger row was checked before continuing. The tracked repository migration files were not renamed, moved, or modified.
+
+| Order | Migration | Result |
+| ---: | --- | --- |
+| 1 | `20260612000000_core_v2_schema.sql` | PASS; previously applied normally and retained |
+| 2 | `20260613031223_phase1_hardening.sql` | PASS unchanged; revoke succeeded and three expected partial indexes were present |
+| 3 | `20260616014633_phase2_transactions_polish.sql` | PASS |
+| 4 | `20260617014754_phase2_recurring_engine.sql` | PASS; expected missing-trigger notice only |
+| 5 | `20260617223117_phase2_recurring_rpc_security.sql` | PASS |
+| 6 | `20260618020337_phase2_goal_contributions.sql` | PASS |
+| 7 | `20260618020719_phase2_goal_contribution_updates.sql` | PASS |
+| 8 | `20260618135018_phase2_goal_icons.sql` | PASS; expected missing-constraint notice only |
+| 9 | `20260618155000_phase2_goal_icon_expand.sql` | PASS |
+| 10 | `20260618165305_phase2_debt_customization.sql` | PASS; two expected missing-constraint notices only |
+| 11 | `20260618190429_phase2_debt_payment_sync.sql` | PASS |
+| 12 | `20260618230624_phase2_hard_delete_goals_debts.sql` | PASS |
+| 13 | `20260622203214_phase3_onboarding_preferences.sql` | PASS |
+| 14 | `20260624165646_phase3_legal_acceptance.sql` | PASS |
+| 15 | `20260624165659_phase3_least_privilege_grants.sql` | PASS |
+| 16 | `20260630155214_goal_packs_schema_foundation.sql` | PASS; all newly created public tables were automatically RLS-enabled by `ensure_rls` and received their explicit policies/grants |
+| 17 | `20260702150000_goal_pack_onboarding_setup_rpc.sql` | PASS |
+| 18 | `20260702172748_goal_pack_debt_onboarding_setup.sql` | PASS |
+| 19 | `20260702182026_goal_pack_debt_onboarding_idempotency_fix.sql` | PASS |
+| 20 | `20260702190850_goal_actions_open_action_dedupe.sql` | PASS |
+| 21 | `20260702194112_goal_pack_plan_rpc_writes.sql` | PASS |
+| 22 | `20260702195005_goal_pack_fk_indexes.sql` | PASS |
+| 23 | `20260707193257_phase3_live_permission_hardening.sql` | PASS normally; legitimate rehearsal ledger row present |
+
+The cron-bearing migration executed unchanged under the explicit exception. It installed `pg_cron` 1.6.4 and created `process-recurring-daily`; that job was immediately unscheduled before any later migration. Final verification shows zero active cron jobs and zero cron run-history rows. The recurring processor was never manually invoked. `pg_net` remains uninstalled, there are zero Realtime publication members and zero Edge Functions, and no outbound application behavior was configured.
+
+### Final baseline verification
+
+- Ledger: exactly the 23 ordered manifest entries above, ending at `20260707193257`; neither `20260721194230` nor `20260721194410` is present.
+- Candidate absence: the unique candidate functions `sync_debt_payoff_goal_progress()`, `sync_linked_goals_after_debt_change()`, and `get_transaction_summary(date,date,text,uuid,transaction_kind,integer,integer,text)` are absent.
+- Schema: 6 public enums, 10 public application tables, 15 public ordinary functions, 77 public table constraints, 33 public indexes, 9 public user triggers, and 37 public RLS policies.
+- Tables: all 10 are owned by `postgres`, have RLS enabled, and contain zero rows: `debts`, `financial_priorities`, `goal_actions`, `goal_plan_snapshots`, `goals`, `profiles`, `recurring_rules`, `transactions`, `user_preferences`, and `user_roles`.
+- Grants: `anon` has no application table or function access. `authenticated` has CRUD on nine application tables, SELECT-only on `user_roles`, and EXECUTE on the 11 intended client RPCs. `service_role` alone has EXECUTE on `process_due_recurring_rules(uuid,date)`; internal helper and trigger functions are not client-executable. All 15 public functions are `postgres`-owned; only `process_due_recurring_rules` and the environmental `rls_auto_enable` are `SECURITY DEFINER`.
+- Future-object defaults: the hardened pre-migration state was preserved. For `postgres` in `public`, future table CRUD grants to `anon`/`authenticated`/`service_role`, future function EXECUTE grants to those roles or `PUBLIC`, and future sequence USAGE/SELECT grants to those roles all remain zero. No reapplication was necessary, and `supabase_admin` defaults were not changed.
+- Data isolation: zero Auth users, Auth identities, Storage buckets, Storage objects, Vault secrets, application rows, Realtime publication members, Edge Functions, cron jobs, or cron runs.
+- Extensions/outbound state: `pg_cron` is installed as authorized; `pg_net` is absent. No SMTP, webhook, API hook, external integration, frontend, or Edge Function was configured or deployed.
+- Advisors: the security advisor returned zero findings. The performance advisor returned 18 informational `unused_index` notices, expected because every application table is empty and no workload has executed; these do not justify removing baseline indexes before synthetic testing. See the [Supabase unused-index advisor guidance](https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index).
+
+This clean repository baseline is ready for a separately authorized synthetic seeding phase. It is not a production-derived restore and makes no claim about production backup/restore recoverability. Production-derived execution remains deferred, and the two Product/UX Follow-Ups 2 candidate migrations remain separately gated.
+
 ## Backup, restore, and migration verification
 
 | Gate | Status | Result |
@@ -196,13 +254,13 @@ Current official guidance confirms that Free projects require manual off-site lo
 | Backup artifacts and checksums | **NOT TESTED** | No artifacts created. |
 | Encryption at rest and retention policy | **NOT TESTED** | No artifact or policy approved. |
 | Restore and equivalence | **NOT TESTED** | No restore attempted. |
-| `20260707193257` effect proof and target ledger repair | **NOT TESTED** | The empty target exists, but no schema/data restore or ledger repair is authorized. |
+| `20260707193257` clean-baseline execution | **PASS** | Executed normally from the unchanged repository file and received its legitimate rehearsal ledger entry; no ledger repair was used. |
 | `20260721194230` on restored copy | **NOT TESTED** | Not applied anywhere. |
 | `20260721194410` on restored copy | **NOT TESTED** | Not applied anywhere. |
 | Schema/security rollback-only suite | **NOT TESTED** | Not executed. |
 | Allocation-behavior rollback-only suite | **NOT TESTED** | Not executed. |
-| Residual synthetic-state checks | **NOT TESTED** | No synthetic state created. |
-| Post-migration advisors | **NOT TESTED** | No migration was applied. The target security advisor was run after the configuration prerequisite and returned 0 findings. |
+| Residual synthetic-state checks | **PASS** | No synthetic state was created; all application and Auth row counts are zero. |
+| Post-baseline advisors | **PASS** | Security: 0 findings. Performance: 18 informational unused-index notices expected on the empty target. |
 | Generated TypeScript types | **NOT TESTED** | No verified restore project exists. |
 | Application gates | **NOT TESTED** | Deferred until verified restored-copy types exist. |
 
@@ -212,7 +270,7 @@ No role-simulation result is claimed. Both SQL verification files remain restore
 
 No backup artifact, decrypted working copy, credential file, password, connection string, token, key, Auth session, or private data export was created or accessed. There is therefore no artifact or credential cleanup to perform from this partial run. No retention duration, encrypted storage location, or key custodian was selected.
 
-The rehearsal target exists, is healthy, and remains active and empty. No cleanup, pause, deletion, or repurposing approval was given. The target must remain isolated until the owner makes a later explicit disposition decision.
+The rehearsal target exists, is healthy, and remains active with the clean pre-candidate repository schema and zero Auth/application rows. No cleanup, pause, deletion, or final-disposition approval was given. The target must remain isolated from production and outbound integrations.
 
 ## Remaining blockers
 
@@ -225,6 +283,6 @@ Any security-critical `NOT TESTED` or any `FAIL` keeps the recovery gate blocked
 
 ## Production safety confirmation
 
-Production received no write. During this 2026-07-31 task, no production credential, backup, restore, application migration, production schema, or production data was accessed or executed. Remote writes were confined to the previously authorized rehearsal-project creation and the 2026-07-31 `postgres`/`public` future-default-privilege prerequisite on that rehearsal project. The target received no application object, extension enablement, schema/data restore, migration, user, function, cron job, webhook, or test. No frontend or Edge Function was deployed. Cloudflare and `budg.ca` were not changed or pointed at the rehearsal target.
+Production received no write. Across the 2026-07-31 prerequisite and 2026-08-02 baseline tasks, no production credential, backup, restore, production schema row, or production data was accessed or executed. Remote writes were confined to the authorized rehearsal project: its future-default-privilege prerequisite, the exact environmental RLS bootstrap pair, and the 23 unchanged baseline migrations through `20260707193257`. Rehearsal contains no Auth user, identity, or application row; the cron job created by the unchanged recurring migration was immediately unscheduled, and no processor was invoked. Neither candidate migration was applied. No SMTP, webhook, external integration, frontend, or Edge Function was configured or deployed. Cloudflare and `budg.ca` were not changed or pointed at the rehearsal target.
 
 **Production was not mutated.**
