@@ -290,6 +290,24 @@ Both candidate ledger rows and all three checked candidate functions remain abse
 
 The rehearsal target is ready for separately authorized application of the first candidate migration. Production-derived backup/restore execution remains deferred.
 
+## 2026-08-02 candidate migration 1 application and validation
+
+The authenticated Supabase CLI applied only `20260721194230_product_ux_follow_ups_2_debt_goal_sync.sql` to `BudgBeacon-Rehearsal` (`gwloyvfkrxzgqnlnlcor`). The applied file retained frozen SHA-256 `678834847D83DB8F3607B13AD49D9DFA51935143C54D268F6658692F9B964B40`. The ledger now contains exactly 24 ordered entries and records `20260721194230` once. Candidate migration 2 remains absent.
+
+Schema verification passed for both composite unique constraints, nullable `goals.linked_debt_id`, the debt-payoff-only check, same-owner composite foreign key with `ON DELETE SET NULL (linked_debt_id)`, partial linked-debt index, both synchronization functions, both enabled triggers, and the unchanged onboarding-v2 signature. Both synchronization functions remain `SECURITY INVOKER`, `postgres`-owned, fixed to `search_path=public, pg_temp`, and executable only by `postgres`. Onboarding v2 remains security-invoker and executable by `authenticated` and `postgres`, not `PUBLIC` or `anon`. All ten application tables retain RLS, all 37 policies remain present, `anon` has no application-table DML grant, and hardened future-table DML defaults remain zero.
+
+The committed backfill exactly matched the predicted eight-row result: three goals linked, with progress 35,000 cents for the owner active goal, 35,000 for the archived owner goal, and 30,000 for the other-user goal. Cross-owner, archived-debt, malformed, non-debt, and missing-debt fixtures remained unlinked at 2,000, 3,000, 4,000, 5,000, and 6,000 cents. Legacy onboarding `debtId` values remained unchanged. Cross-owner and archived-debt linked-row counts are both zero.
+
+The rollback-only ownership/progress/RLS group passed. It proved composite-FK, goal-type, and archived-debt rejection; immediate synchronization of both linked owner goals; the exact derived-progress formula; zero and full-target clamps; direct-overwrite restoration; target-change recalculation; debt-delete unlinking without unrelated-goal damage; bidirectional authenticated-user isolation; and anonymous denial. The transaction rolled back and permanent goal/debt/link counts and progress values returned to the committed fixture state.
+
+The onboarding-v2 rollback group found a blocker on its first creation assertion. The RPC created exactly one same-owner debt and goal, set `linked_debt_id`, and derived progress correctly, but `planning_rules.onboarding.debtId` remained absent when the supplied planning rules were `{}`. The nested `jsonb_set(..., '{onboarding,debtId}', ..., true)` call does not create the missing intermediate `onboarding` object. The diagnostic transaction rolled back completely: the ephemeral Auth user, goal, and debt counts are all zero. Retry, updated-debt, change-away, unauthenticated, and onboarding-specific cross-owner assertions were not continued after this contract failure.
+
+Candidate-2 preservation remains intact: all six fail-fast integrity counts are zero; exactly one goal-target transaction, one debt-target transaction, and one debt-target recurring rule still require normalization; `allocation_applied_cents`, `client_operation_id`, and `get_transaction_summary(...)` remain absent; and candidate 2 is absent from the ledger. Final permanent counts remain 2 Auth users, 2 identities, 8 goals, 3 debts, 5 transactions, and 2 recurring rules. Post-migration fixture fingerprint: `94ec1975972b1af73a16ad09429936db`.
+
+Active cron jobs and cron-run rows remain zero. Edge Functions and Realtime publication members remain zero, and `pg_net` remains absent. Security advising reports the existing leaked-password-protection warning. Performance advising reports one unindexed composite-foreign-key notice plus 11 expected unused-index notices; no index was changed. Production and legacy remained untouched.
+
+Recommendation: **remediation required** before candidate migration 2. Candidate migration 1 must not be reapplied, and candidate migration 2 remains prohibited until the onboarding JSON contract is corrected and the complete onboarding rollback suite passes.
+
 ## Backup, restore, and migration verification
 
 | Gate | Status | Result |
