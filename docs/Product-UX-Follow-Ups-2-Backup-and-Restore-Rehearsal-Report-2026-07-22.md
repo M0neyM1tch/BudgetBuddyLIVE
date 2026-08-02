@@ -308,6 +308,18 @@ Active cron jobs and cron-run rows remain zero. Edge Functions and Realtime publ
 
 Recommendation: **remediation required** before candidate migration 2. Candidate migration 1 must not be reapplied, and candidate migration 2 remains prohibited until the onboarding JSON contract is corrected and the complete onboarding rollback suite passes.
 
+## 2026-08-02 local onboarding JSON remediation
+
+The confirmed root cause is unchanged: PostgreSQL `jsonb_set(..., '{onboarding,debtId}', ..., true)` does not create a missing intermediate `onboarding` object. Local migration `20260721194320_product_ux_follow_ups_2_onboarding_json_parent_fix.sql` was added between candidate migrations 1 and 2. It replaces only `public.create_goal_pack_onboarding_setup_v2(...)` and preserves the existing signature, defaults, return contract, invoker security, fixed `search_path`, authentication and locking behavior, goal/debt reuse, relational link, progress synchronization, comment, revocations, and grant.
+
+The replacement normalizes the current top-level `planning_rules` value to an object, replaces a missing or non-object `onboarding` value with an empty object, merges any existing onboarding-object siblings, and overwrites the four authoritative compatibility fields: `debtId`, `debtInterestRateBasisPoints`, `debtMinimumPaymentCents`, and `debtType`. Unrelated top-level and onboarding keys are preserved; no nested write depends on a pre-existing intermediate object.
+
+Rollback-only regression assertions were added to `supabase/tests/product_ux_follow_ups_2_schema_security.sql` for empty and null planning rules, a missing onboarding object with top-level siblings, existing onboarding siblings and stale metadata, a non-object onboarding value, retry reuse and metadata updates, change away from debt payoff, unauthenticated rejection, cross-owner debt injection resistance, and bidirectional RLS isolation. The remediation assertions run after candidate 1 and this fix without requiring candidate 2; the existing candidate-2-only assertions are explicitly gated on the candidate-2 summary RPC being present. These assertions are prepared for later hosted execution and were not executed against Supabase in this local-only task.
+
+Final local review passed migration filename ordering and collision checks, exact candidate-1 function-contract comparison, SQL dollar-quote/delimiter checks, candidate-2 and unrelated-DDL exclusion scans, cron/outbound scans, secret-pattern scanning, `git diff --check`, TypeScript compilation, ESLint, all 20 Vitest files and 69 tests, and the Vite production build. Initial Vitest and Vite attempts were environment-blocked by the managed read-only sandbox's temporary-file and module-resolution restrictions; unchanged-dependency retries with local filesystem permission passed, so no dependency was installed or updated.
+
+Candidate migration 1 remains byte-identical at SHA-256 `678834847D83DB8F3607B13AD49D9DFA51935143C54D268F6658692F9B964B40`. Candidate migration 2 remains byte-identical at SHA-256 `E7CF5834475DA1904E196895B056823773494DFB3C00811D9D6E89FFC8650A75` and, per the verified starting state, remains unapplied. No hosted database, migration ledger, cron, Edge Function, Realtime, SMTP, webhook, or integration action occurred. Production and legacy remained untouched.
+
 ## Backup, restore, and migration verification
 
 | Gate | Status | Result |
