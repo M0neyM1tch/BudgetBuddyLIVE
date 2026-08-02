@@ -241,6 +241,55 @@ The cron-bearing migration executed unchanged under the explicit exception. It i
 
 This clean repository baseline is ready for a separately authorized synthetic seeding phase. It is not a production-derived restore and makes no claim about production backup/restore recoverability. Production-derived execution remains deferred, and the two Product/UX Follow-Ups 2 candidate migrations remain separately gated.
 
+## 2026-08-02 synthetic pre-candidate fixtures
+
+The separately authorized synthetic fixture transaction targeted only `BudgBeacon-Rehearsal` (`gwloyvfkrxzgqnlnlcor`). Preflight reconfirmed the healthy target, the exact 23-row baseline ledger through `20260707193257`, zero existing Auth/application rows, zero active cron jobs, RLS on every public table, and the absence of both candidate migrations and their unique objects. No production or legacy write occurred.
+
+The first transaction attempt rolled back completely when the current managed `auth.identities.email` generated column correctly rejected an explicit value. A read-only catalog check confirmed zero residual rows and identified the generated expression. The corrected transaction omitted that generated column and committed atomically. No password, credential, token, connection string, or secret was created or recorded.
+
+### Fixture manifest
+
+| Scope | Count | Synthetic coverage |
+| --- | ---: | --- |
+| Auth users / email identities | 2 / 2 | Passwordless, confirmed `example.invalid` fixtures with deterministic reserved IDs |
+| Profiles / user preferences | 2 / 2 | Created by the unchanged `on_auth_user_created` trigger; preference samples remain synthetic |
+| User roles | 2 | Ordinary `user` roles only |
+| Debts | 3 | Owner active, owner archived, and second-user active debts |
+| Goals | 8 | Same-owner, cross-owner, archived-debt, malformed UUID, non-debt goal type, missing debt, archived goal, and second-user same-owner backfill cases |
+| Financial priorities | 2 | One per synthetic user, pointing to that user's expected positive backfill goal |
+| Goal-plan snapshots / goal actions | 2 / 2 | One same-owner record per user |
+| Recurring rules | 2 | One inactive debt-target normalization fixture and one active far-future ordinary income rule |
+| Transactions | 5 | Ordinary, goal-target normalization, debt-target normalization, second-user ordinary, and second-user correctly targeted rows |
+
+All recurring dates are in 2099; the debt-target rule is inactive. The recurring processor was never called. No cron job, Edge Function, webhook, Realtime member, SMTP configuration, or other outbound integration was created or invoked.
+
+### RLS and pre-candidate verification
+
+The seed transaction impersonated `authenticated` independently for both reserved users. The owner saw exactly `1/1/1/7/2/1/3/1/1/1` rows across profiles, roles, preferences, goals, debts, recurring rules, transactions, priorities, snapshots, and actions. The second user saw exactly `1/1/1/1/1/1/2/1/1/1`. A cross-user goal insert raised the expected insufficient-privilege error; cross-user update and delete each affected zero rows. An `anon` table read raised insufficient privilege. All public tables remain RLS-enabled and `anon` retains zero application-table DML grants.
+
+The first candidate migration is expected to link exactly three goals:
+
+- same-owner active goal: link to its active debt and change progress from 7,000 to 35,000 cents;
+- same-owner archived goal: link to the same active debt and change progress from 8,000 to 35,000 cents, because the tracked backfill intentionally does not filter archived goals;
+- second-user same-owner active goal: link to its active debt and change progress from 9,000 to 30,000 cents.
+
+The cross-owner, archived-debt, malformed-UUID, non-debt-goal, and missing-debt fixtures must remain unlinked with their existing progress values of 2,000, 3,000, 4,000, 5,000, and 6,000 cents respectively.
+
+The second candidate migration's six fail-fast integrity counts are all zero. Its deterministic normalization set is one goal-target transaction, one debt-target transaction, and one debt-target recurring rule.
+
+Post-seed fingerprints:
+
+- complete deterministic fixture fingerprint: `e2f1f7923fce3d40cb4101b347e50ea3`;
+- schema fingerprint: `96a71753282a5e8856209cab4b777b99` (unchanged);
+- policy fingerprint: `0666f0a5b7a5fe27437715e326495b00` (unchanged);
+- table-grant fingerprint: `3f7be5a25500b2b1ce553cb45a8dd3bf` (unchanged);
+- function-grant fingerprint: `0150f5c0b051f02444a7b23c04e29a5e` (unchanged);
+- migration-ledger fingerprint: `79d26cfb06e5c66912a529add43cccec` (unchanged).
+
+Both candidate ledger rows and all three checked candidate functions remain absent. Active cron jobs and cron-run rows remain zero. Edge Functions, Realtime publication members, Storage buckets/objects, Vault secrets, and password-material rows remain zero; `pg_net` remains absent. The security advisor reports the project-level leaked-password-protection warning after Auth fixtures exist; the fixtures themselves contain no password material. Performance reports 12 informational unused-index notices, expected before a representative workload.
+
+The rehearsal target is ready for separately authorized application of the first candidate migration. Production-derived backup/restore execution remains deferred.
+
 ## Backup, restore, and migration verification
 
 | Gate | Status | Result |
