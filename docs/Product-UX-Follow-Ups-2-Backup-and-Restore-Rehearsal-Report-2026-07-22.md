@@ -320,6 +320,20 @@ Final local review passed migration filename ordering and collision checks, exac
 
 Candidate migration 1 remains byte-identical at SHA-256 `678834847D83DB8F3607B13AD49D9DFA51935143C54D268F6658692F9B964B40`. Candidate migration 2 remains byte-identical at SHA-256 `E7CF5834475DA1904E196895B056823773494DFB3C00811D9D6E89FFC8650A75` and, per the verified starting state, remains unapplied. No hosted database, migration ledger, cron, Edge Function, Realtime, SMTP, webhook, or integration action occurred. Production and legacy remained untouched.
 
+## 2026-08-02 hosted onboarding remediation verification and fixture correction
+
+The authenticated Supabase CLI successfully applied only `20260721194320_product_ux_follow_ups_2_onboarding_json_parent_fix.sql` to `BudgBeacon-Rehearsal` (`gwloyvfkrxzgqnlnlcor`). The applied migration retains SHA-256 `99ECE84EA43F03D6E2F7414D81FE457E448D5FA3C9004AE235A497FA0CCC6CE8`; the ledger contains exactly 25 entries, with candidate migration 1 and the remediation each present once and candidate migration 2 absent.
+
+Hosted definition verification confirmed that `public.create_goal_pack_onboarding_setup_v2(...)` matches the remediation migration: its signature, defaults, JSONB return type, `postgres` ownership, `SECURITY INVOKER`, `search_path=public, pg_temp`, comment, and execution grants are unchanged. The function now performs one top-level `{onboarding}` object merge and writes all four authoritative debt metadata fields without relying on a nested write whose intermediate parent may be absent.
+
+The initial hosted regression attempt exposed a test-fixture defect, not another function or migration defect. The committed onboarding calls omitted `p_debt_icon`, so the temporary debt insert failed on the unrelated `debts.icon` `NOT NULL` constraint before reaching the JSON assertions. That transaction rolled back completely. The same rollback-only behavior suite passed when the RPC calls supplied valid presentation inputs `p_debt_color='#00ffaa'` and `p_debt_icon='credit-card'`.
+
+With those valid inputs, hosted checks passed empty and null planning rules; missing `onboarding`; top-level and onboarding sibling preservation; stale metadata replacement; scalar and array onboarding normalization; relational/JSON debt-ID equality; interest-rate, minimum-payment, and debt-type metadata; derived progress; retry reuse without duplicate debt creation; updated retry data; change away from debt payoff; unauthenticated rejection; cross-owner injection resistance; bidirectional RLS isolation; and anonymous denial. Focused migration-1 synchronization and ownership smoke tests also passed.
+
+All rollback residue checks returned zero. Permanent counts returned to 2 Auth users, 2 identities, 8 goals, 3 debts, 5 transactions, 2 recurring rules, and 3 linked goals, with application-data fingerprint `94ec1975972b1af73a16ad09429936db`. Candidate migration 2 and its unique objects remain absent; its three normalization fixtures remain present and all six fail-fast integrity counts remain zero. Production `BudgetBuddy-V2` and legacy `BudgetBuddy` remained untouched.
+
+The local SQL fixture now supplies `p_debt_color => '#00ffaa'` and `p_debt_icon => 'credit-card'` to every debt-payoff onboarding call, including the unauthenticated isolation case, and explicitly exercises both scalar and array `onboarding` inputs. The test remains enclosed by its original top-level transaction and final rollback, and candidate-2-only assertions remain behind their existing conditional gate.
+
 ## Backup, restore, and migration verification
 
 | Gate | Status | Result |

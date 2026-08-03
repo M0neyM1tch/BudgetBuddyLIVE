@@ -257,7 +257,9 @@ begin
       p_debt_principal_cents => 10000,
       p_debt_current_balance_cents => 7000,
       p_debt_interest_rate_basis_points => 1200,
-      p_debt_minimum_payment_cents => 500
+      p_debt_minimum_payment_cents => 500,
+      p_debt_color => '#00ffaa',
+      p_debt_icon => 'credit-card'
     );
   exception when sqlstate '28000' then
     v_rejected := true;
@@ -295,7 +297,7 @@ declare
   v_minimum integer;
   v_legacy_rules jsonb;
 begin
-  for v_case in 1..5 loop
+  for v_case in 1..6 loop
     v_rules := case v_case
       when 1 then '{}'::jsonb
       when 2 then '{"unrelatedTopLevel":"preserve-me"}'::jsonb
@@ -310,6 +312,10 @@ begin
         }
       }'::jsonb
       when 4 then '{
+        "unrelatedTopLevel":"preserve-me",
+        "onboarding":"legacy-non-object"
+      }'::jsonb
+      when 5 then '{
         "unrelatedTopLevel":"preserve-me",
         "onboarding":["legacy-non-object"]
       }'::jsonb
@@ -346,7 +352,9 @@ begin
       p_debt_current_balance_cents => 7000,
       p_debt_interest_rate_basis_points => v_interest,
       p_debt_minimum_payment_cents => v_minimum,
-      p_debt_payment_frequency => 'monthly'
+      p_debt_payment_frequency => 'monthly',
+      p_debt_color => '#00ffaa',
+      p_debt_icon => 'credit-card'
     );
 
     select * into strict v_goal
@@ -382,7 +390,7 @@ begin
       raise exception 'Onboarding JSON was not normalized to objects in case %.', v_case;
     end if;
 
-    if v_case between 2 and 4
+    if v_case between 2 and 5
       and v_goal.planning_rules ->> 'unrelatedTopLevel' is distinct from 'preserve-me' then
       raise exception 'An unrelated top-level planning-rule key was lost in case %.', v_case;
     end if;
@@ -425,7 +433,9 @@ begin
     p_debt_current_balance_cents => 6500,
     p_debt_interest_rate_basis_points => 1500,
     p_debt_minimum_payment_cents => 650,
-    p_debt_payment_frequency => 'monthly'
+    p_debt_payment_frequency => 'monthly',
+    p_debt_color => '#00ffaa',
+    p_debt_icon => 'credit-card'
   );
 
   select * into strict v_goal
@@ -495,7 +505,9 @@ begin
     p_debt_current_balance_cents => 16000,
     p_debt_interest_rate_basis_points => 900,
     p_debt_minimum_payment_cents => 800,
-    p_debt_payment_frequency => 'monthly'
+    p_debt_payment_frequency => 'monthly',
+    p_debt_color => '#00ffaa',
+    p_debt_icon => 'credit-card'
   );
   v_other_debt_id := (v_result ->> 'debt_id')::uuid;
 
