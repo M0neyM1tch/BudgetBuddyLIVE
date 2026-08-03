@@ -419,3 +419,76 @@ Static validation passed migration ordering and timestamp-collision checks, bala
 No candidate-2 fixture assertion was run against persistent hosted state, no real migration application was retried, and no cron, Realtime, Edge Function, Auth, SMTP, webhook, network, or other outbound behavior was invoked or changed. Production `BudgetBuddy-V2` (`cebykmbauxbucvforwzj`) and legacy `BudgetBuddy` (`yvsizxnfqkkazqnwbgnc`) remained untouched.
 
 Recommendation: **ready for manual push and a rebuilt isolated candidate-2 dry run**.
+
+## 2026-08-03 corrected candidate-2 application and hosted validation
+
+Git `HEAD` and `origin/Product/UX-Follow-Ups-2` were synchronized at `d0bf59d48df50e14979b80bf0f577228b5601b7f` with a clean starting tree. The authenticated Supabase CLI used only the fresh verified workspace `C:\Users\Mitch\AppData\Local\Temp\codex-budgbeacon-candidate2-corrected-b309478864d14665b93bcc0f8d8ae474`. It proposed and applied only `20260721194410_product_ux_follow_ups_2_transaction_summary_and_retarget.sql`, then reported `Finished supabase db push.` The target was the healthy `BudgBeacon-Rehearsal` project (`gwloyvfkrxzgqnlnlcor`, `us-east-2`, PostgreSQL 17.6). Production `BudgetBuddy-V2` and legacy `BudgetBuddy` were not accessed.
+
+Candidate 1, the onboarding remediation, and corrected candidate 2 matched SHA-256 `678834847D83DB8F3607B13AD49D9DFA51935143C54D268F6658692F9B964B40`, `99ECE84EA43F03D6E2F7414D81FE457E448D5FA3C9004AE235A497FA0CCC6CE8`, and `D7C24CE992FC6D9593E1D8DC5CECC14425CFE0666D07BE50F7B677A9B579F82D`. The post-application ledger contains exactly 26 distinct versions, with `20260721194230`, `20260721194320`, and `20260721194410` each present once. No duplicate, repair, reset, or additional migration entry exists.
+
+### Permanent migration effects
+
+Exactly the prepared semantic fixtures were normalized:
+
+| Object | Identifier | Permanent semantic result | Preserved contract |
+|---|---|---|---|
+| Goal-target transaction | `30000000-0000-0000-0000-000000000902` | `kind=transfer`, `category=savings` | Owner, 1,500-cent amount, 2099-01-11 date, description, notes, manual source, goal `10000000-0000-0000-0000-000000000905`, null debt/rule/bank/Plaid fields, and creation timestamp preserved; `updated_at` changed through the migration update path. |
+| Debt-target transaction | `30000000-0000-0000-0000-000000000903` | `kind=transfer`, `category=debt_payment` | Owner, 2,000-cent amount, 2099-01-12 date, description, notes, manual source, debt `20000000-0000-0000-0000-000000000901`, null goal/rule/bank/Plaid fields, and creation timestamp preserved; `updated_at` changed through the migration update path. |
+| Debt-target recurring rule | `50000000-0000-0000-0000-000000000901` | `kind=transfer`, `category=debt_payment` | Owner, 2,500-cent amount, monthly frequency, day 1, 2099 dates, inactive state, description, notes, debt ID, and creation timestamp preserved; `updated_at` changed through the migration update path. |
+
+All remaining targeted transactions and debt-target rules have valid semantics. No additional row was unexpectedly semantically normalized. The already-correct second-user debt transaction remained `transfer/debt_payment`; its `updated_at` changed only because the historical allocation-backfill statement intentionally updated every targeted transaction.
+
+Historical allocation state for the five permanent transactions is:
+
+| Transaction | Amount | Goal | Debt | Applied allocation | Operation ID |
+|---|---:|---|---|---:|---|
+| `30000000-0000-0000-0000-000000000901` | 10,000 | null | null | 0 | null |
+| `30000000-0000-0000-0000-000000000902` | 1,500 | `10000000-0000-0000-0000-000000000905` | null | 1,500 | null |
+| `30000000-0000-0000-0000-000000000903` | 2,000 | null | `20000000-0000-0000-0000-000000000901` | 2,000 | null |
+| `30000000-0000-0000-0000-000000000904` | 1,200 | null | null | 0 | null |
+| `30000000-0000-0000-0000-000000000905` | 1,000 | null | `20000000-0000-0000-0000-000000000903` | 1,000 | null |
+
+Every targeted row equals `abs(amount_cents)`, every untargeted row equals zero, and all five pre-existing operation IDs are null.
+
+### Schema, RLS, and grants
+
+Catalog verification passed for the unique `(id,user_id)` recurring-rule constraint; the recurring debt semantic constraint; both transaction columns; the single-target, nonnegative-allocation, and target-semantic checks; all three composite same-owner foreign keys; and the valid partial unique `(user_id,client_operation_id)` index. `allocation_applied_cents` is `integer NOT NULL DEFAULT 0`; `client_operation_id` is nullable `uuid`. The four enabled/origin triggers point to the expected allocation and lock helpers with the intended timing and events.
+
+All 13 candidate-2-created or replaced function signatures exist with owner `postgres` and fixed `search_path=public, pg_temp`. The trigger helpers and client RPCs are `SECURITY INVOKER`. `process_due_recurring_rules(uuid,date)` retains its intended `SECURITY DEFINER`, service-role-only contract; it is not executable by `PUBLIC`, `anon`, or `authenticated`. Internal helpers have no execution for those three roles. Authenticated execution is present only for the intended client RPCs, while the recurring processor is executable only by `service_role`.
+
+All ten application tables retain RLS and all 37 policies remain present. `anon` has zero application-table DML grants and no new function execution. Authenticated table grants remain the established per-table contract. Hardened `postgres`/`public` future defaults remain intact: client table CRUD, client function execution, client sequence `USAGE`/`SELECT`, and `PUBLIC` function execution counts are all zero.
+
+### Committed and supplemental rollback suites
+
+The committed files were byte-identical to Git: `product_ux_follow_ups_2_schema_security.sql` SHA-256 `84AD21166880F1B5E7FEF7080FBC974FA2BCFD3CA244CEC8C791F33DABD0D450`, and `product_ux_follow_ups_2_allocation_behavior.sql` SHA-256 `DC4951408CD88716FB5F5533B8C4BA96913972BDEFE391DBB29297CAB6B9CFFE`. The 965-line schema/security suite ran with its psql `\gset`/`\if` gate interpreted client-side as true; its SQL statements were unchanged. The 496-line allocation suite contained no client directives and ran unchanged. Both used their committed top-level `BEGIN` and final `ROLLBACK` and passed without an assertion failure.
+
+Allocation checks passed exact goal and debt deltas, linked-goal synchronization, goal and debt overpayment clamps, same-target updates, goal-to-debt and debt-to-goal retargeting, target removal, deletion reversal by recorded delta, and direct insert/update/delete parity. A linked debt-payoff goal rejected direct targeting. Constraint and ownership checks rejected dual targets, cross-owner and archived targets, cross-owner recurring relationships, negative stored allocation, incorrect goal/debt semantics, active targetless rules, fresh targetless transfers, ordinary-to-unallocated-transfer conversion, and mismatched recurring semantics. Historical targetless transfers produced by target deletion remained valid and editable.
+
+Quick-add checks passed one-row/one-allocation creation, identical retry identity, unchanged balance on retry, changed-input rejection, operation-ID immutability, per-user reuse of the same UUID, cross-owner target rejection, and unauthenticated rejection.
+
+Recurring checks passed normalized debt-rule semantics, same-owner rule/target relationships, compatible updates, exact duplicate occurrence idempotency, semantically different duplicate rejection, and exact deletion reversal. The committed allocation suite invokes `process_due_recurring_rules()` twice for its reserved ephemeral user to prove exactly-once behavior; both calls occurred only inside its transaction and were rolled back. No separate call, permanent-user call, scheduled invocation, or persistent recurring effect occurred.
+
+Transaction-summary checks passed unfiltered integer-cent totals and count, transfer exclusion from monetary totals, date/category/debt/kind/minimum/maximum filters, description/category/notes search, punctuation and repeated-whitespace sanitization, empty-result zeros, invalid date and amount rejection, category/search length limits, unauthenticated rejection, bidirectional owner isolation, and exact parity with the corresponding owner-visible list aggregate.
+
+Candidate-1 and onboarding regression assertions also passed: three permanent linked goals; cross-owner and archived-debt cases remaining unlinked; debt-change synchronization; empty/null planning rules; missing, scalar, and array onboarding parents; sibling preservation; authoritative relational/JSON debt IDs and metadata; and retry without duplicate debt creation.
+
+### Rollback proof, fingerprints, and advisors
+
+All reserved suite users and identities and every associated application row returned to zero. Permanent counts returned to 2 Auth users, 2 identities, 8 goals, 3 debts, 5 transactions, 2 recurring rules, and 3 linked goals. The permanent normalizations and allocation backfill above remain, with no other test mutation.
+
+Fresh deterministic sorted-row/catalog fingerprints after candidate 2 are:
+
+- application data: `0b999b5c0edbaaf820c452c9582ee614`;
+- schema: `b8f4f1d34cfb5fbb5ca0372e88040ca5`;
+- policies: `f5cb47774dd0a791064138d075d33f82`;
+- table grants: `f09c8da28b8f572a2f5eb66a7dce85f6`;
+- function grants: `6edd6edcda30309c86167fd1a8679f5c`;
+- migration ledger: `7edd1752d3e4027753c38d1e618c1b2c`.
+
+These refreshed values use one canonical sorted-text calculation across the complete current application rows and relevant catalog sets. Earlier fingerprints calculated over pre-candidate or differently normalized sets remain historical and are not silently compared as if their formulas were identical.
+
+The security advisor reports only the existing project-level warning that leaked-password protection is disabled. The performance advisor still reports the pre-existing unindexed composite foreign key on `goals_linked_debt_owner_fkey` and ten pre-existing unused-index notices. Candidate 2 adds informational unindexed-composite-FK notices for `transactions_goal_owner_fkey`, `transactions_debt_owner_fkey`, and `transactions_recurring_rule_owner_fkey`; no trigger/function security finding appeared, and the new operation-ID index was not reported unused. No index, policy, Auth setting, or configuration was changed during validation.
+
+Final outbound checks are zero active cron jobs, zero cron-history rows, zero Edge Functions, zero Realtime publication members, no `pg_net`, zero application webhook triggers, and zero outbound function references. No SMTP, webhook, network, or other external integration was configured or invoked. The ledger remains 26 with candidate 2 present exactly once; no additional migration was applied. Production and legacy remained untouched.
+
+Recommendation: **ready for final types and application QA**.
