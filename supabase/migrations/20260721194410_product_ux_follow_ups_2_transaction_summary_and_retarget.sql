@@ -241,14 +241,20 @@ begin
     -- descriptions may legitimately receive the debt RPC's fallback text.
     if new.source is distinct from 'recurring'::public.transaction_source
       or new.amount_cents is distinct from v_rule.amount_cents
-      or new.kind is distinct from case
-        when v_rule.debt_id is not null then 'transfer'::public.transaction_kind
-        else v_rule.kind
-      end
-      or new.category is distinct from case
-        when v_rule.debt_id is not null then 'debt_payment'
-        else v_rule.category
-      end
+      or new.kind is distinct from (
+        case
+          when v_rule.debt_id is not null
+            then 'transfer'::public.transaction_kind
+          else v_rule.kind
+        end
+      )
+      or new.category is distinct from (
+        case
+          when v_rule.debt_id is not null
+            then 'debt_payment'
+          else v_rule.category
+        end
+      )
       or (
         nullif(btrim(v_rule.description), '') is not null
         and new.description is distinct from v_rule.description
