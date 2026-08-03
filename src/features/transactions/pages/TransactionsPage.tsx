@@ -501,9 +501,7 @@ export function TransactionsPage() {
   const activePriorityGoal = activeGoals.find(
     (goal) => goal.id === priorityQuery.data?.active_goal_id,
   );
-  const activePriorityDebtId = (activePriorityGoal as (typeof activeGoals)[number] & {
-    linked_debt_id?: string | null;
-  } | undefined)?.linked_debt_id;
+  const activePriorityDebtId = activePriorityGoal?.linked_debt_id;
   const activePriorityDebt = activeDebts.find((debt) => debt.id === activePriorityDebtId);
   const activePriorityName = activePriorityGoal?.name ?? null;
   const isDebtPriority = activePriorityGoal?.goal_type === 'debt_payoff';

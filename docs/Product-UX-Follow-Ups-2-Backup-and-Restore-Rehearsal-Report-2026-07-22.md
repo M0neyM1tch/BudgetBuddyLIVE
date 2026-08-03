@@ -492,3 +492,78 @@ The security advisor reports only the existing project-level warning that leaked
 Final outbound checks are zero active cron jobs, zero cron-history rows, zero Edge Functions, zero Realtime publication members, no `pg_net`, zero application webhook triggers, and zero outbound function references. No SMTP, webhook, network, or other external integration was configured or invoked. The ledger remains 26 with candidate 2 present exactly once; no additional migration was applied. Production and legacy remained untouched.
 
 Recommendation: **ready for final types and application QA**.
+
+## 2026-08-03 rehearsal-generated TypeScript types and application contract alignment
+
+The authenticated, read-only type-generation source was `BudgBeacon-Rehearsal` (`gwloyvfkrxzgqnlnlcor`), schema `public`, after the verified 26-entry migration ledger recorded corrected candidate migration 2 exactly once. The user ran:
+
+```powershell
+supabase gen types typescript --project-id "gwloyvfkrxzgqnlnlcor" --schema public
+```
+
+The output was captured outside the repository at `C:\Users\Mitch\AppData\Local\Temp\budgbeacon-rehearsal-public.types.ts`. It was 36,548 bytes with SHA-256 `FA97D5A18674FC9331F5F0E6CBBAF57DE94AA36F77E9D8C6F8904681AEBF32A3`. Validation confirmed one complete top-level `Database` declaration, only the generator's `__InternalSupabase` metadata and requested `public` schema, balanced TypeScript syntax, and no CLI message, terminal prompt, URL, credential, token, password, or unrelated output. Its UTF-8 BOM and CRLF line endings were safely normalized to the repository's established BOM-less UTF-8 and LF convention.
+
+Repository search identified `src/types/database.types.ts` as the single canonical generated type file. The application client in `src/shared/lib/supabase.ts` imports that `Database` type and calls `createClient<Database>`. No competing or abandoned generated type file exists. The normalized tracked file is textually identical to the normalized rehearsal output; no generated declaration was edited by hand.
+
+### Generated contract review
+
+The generated semantic diff is limited to the expected final migration contract:
+
+- `goals.Row`, `goals.Insert`, and `goals.Update` now include nullable `linked_debt_id`, and the generated relationship metadata includes `goals_linked_debt_owner_fkey` over `(linked_debt_id,user_id)` to `debts(id,user_id)`.
+- `transactions.Row`, `transactions.Insert`, and `transactions.Update` now include non-null/defaulted `allocation_applied_cents` and nullable `client_operation_id` as appropriate. Generated relationships include the composite same-owner goal, debt, and recurring-rule foreign keys in addition to the existing single-column relationships.
+- Existing transaction-returning allocation and update RPC rows now include `allocation_applied_cents` and `client_operation_id`.
+- `create_quick_add_transaction`, `update_transaction_and_retarget`, and `get_transaction_summary` are present with the hosted argument names and generated row-return contracts. The summary returns non-null numeric `income_cents`, `expense_cents`, `net_cents`, and `transaction_count` values as an array row.
+- The five existing enums remain unchanged, including `transfer` in `transaction_kind`. The generated ten-table set contains no unexplained object.
+- Candidate-1, onboarding-remediation, allocation, recurring, goal-pack onboarding/recalculation, action-completion, transaction-update, and hard-deletion RPC declarations remain present. Argument names, generator-represented defaults/optionality, enums, return rows, and set-return metadata match the repository migration contracts. Trigger-only internal functions remain outside the generated client RPC surface as expected.
+
+### Application contract alignment
+
+The refreshed types exposed two stale test fixtures that omitted the now-required `linked_debt_id`; both fixtures now specify `null`. The application now reads `linked_debt_id` directly from generated goal types in the Transactions page and goal-pack dashboard model instead of using provisional structural casts.
+
+The earlier broad untyped local-RPC workaround in `transactions.api.ts` was removed. A narrow adapter derived from `Database["public"]["Functions"]` now preserves each generated RPC name, required argument, enum, and return contract while widening only parameters that the SQL signatures deliberately accept as `NULL`; Supabase generation does not encode that SQL nullability for non-defaulted arguments. No generated type was altered to accommodate application code, and no `any`, `unknown as`, suppression directive, non-null assertion, disabled lint rule, empty-string substitute, or duplicated database business logic was introduced.
+
+Static application review confirmed:
+
+- quick add creates one UUID per submission payload, reuses it for an identical retry, calls `create_quick_add_transaction`, leaves balance allocation to the database, and never updates `client_operation_id` later;
+- transaction edits call `update_transaction_and_retarget`, send mutually exclusive goal/debt targets or two null targets for removal, preserve the existing recurring relationship in the database RPC, consume generated transaction rows, and do not update balances in the frontend;
+- transaction summaries call `get_transaction_summary` with the same date, category, debt, kind, integer-cent amount, and sanitized-search filters used by the list query; they use the complete server-side result rather than a paginated client page, safely produce zeroes for an empty result, and present transfers as zero monetary contribution;
+- linked debt-payoff goals use `linked_debt_id`, quick-add payments target the debt rather than the linked goal, and displayed progress remains database-derived. Existing onboarding code retains relational/legacy-JSON compatibility;
+- recurring debt rules use `transfer`/`debt_payment` semantics, and transaction mutations invalidate server-backed goal, debt, summary, list, recurring, dashboard, analytics, calculator, and goal-pack queries instead of manually applying generated allocations.
+
+### Automated QA
+
+- `npm run typecheck`: passed after classifying and correcting the two stale test fixtures and removing provisional contract casts.
+- `npm run lint`: passed.
+- Targeted Vitest run: 4 files and 24 tests passed for transaction RPC adapters, quick-add target resolution, goal-pack dashboard behavior, and goal planning.
+- Complete `npm test`: 20 files and 69 tests passed.
+- `npm run build`: passed; TypeScript project compilation and the Vite production build completed successfully.
+- Standalone generated-file TypeScript syntax validation passed, and the full typecheck confirmed canonical import resolution.
+- `git diff --check` and credential/secret scans passed. Added application/source lines contain no production, legacy, rehearsal-project, service-role, temporary-path, `any`, `unknown as`, TypeScript-suppression, or lint-suppression reference; documentation contains only the authorized project references and temporary generation path recorded above.
+- No migration, Supabase SQL test, package manifest, lockfile, environment file, project-link metadata, CI, deployment, production, or legacy configuration changed.
+
+### Manual rehearsal browser-QA checklist
+
+Browser QA was **not** performed during this local type-alignment task. The following checklist remains for a later interactive rehearsal session using the two synthetic users:
+
+1. Quick-add ordinary income.
+2. Quick-add ordinary expense.
+3. Quick-add goal contribution.
+4. Quick-add debt payment.
+5. Retry and double-click protection.
+6. Edit a transaction amount.
+7. Retarget a goal contribution to a debt.
+8. Retarget a debt payment to a goal.
+9. Remove a transaction target.
+10. Delete a targeted transaction.
+11. Confirm goal and debt balances refresh correctly.
+12. Confirm linked debt-payoff goal progress stays synchronized.
+13. Confirm transaction summary matches visible filters.
+14. Exercise date, category, kind, amount, debt, and search filters.
+15. Confirm the empty-summary state.
+16. Confirm recurring debt-rule display and generated-transaction behavior.
+17. Confirm refresh/reload persistence.
+18. Smoke-test owner-to-owner isolation with the two synthetic rehearsal users.
+
+This task used only the already-generated local file and repository checks. It did not regenerate types, apply a migration, write database or Auth data, invoke or schedule cron, deploy an Edge Function, change Realtime or project configuration, or perform any other Supabase write. Production `BudgetBuddy-V2` (`cebykmbauxbucvforwzj`) and legacy `BudgetBuddy` (`yvsizxnfqkkazqnwbgnc`) remained untouched.
+
+Recommendation: **ready for manual push and browser QA**.

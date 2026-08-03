@@ -247,6 +247,7 @@ export type Database = {
           id: string
           is_archived: boolean
           last_plan_calculated_at: string | null
+          linked_debt_id: string | null
           monthly_commitment_cents: number | null
           name: string
           plan_status: string
@@ -268,6 +269,7 @@ export type Database = {
           id?: string
           is_archived?: boolean
           last_plan_calculated_at?: string | null
+          linked_debt_id?: string | null
           monthly_commitment_cents?: number | null
           name: string
           plan_status?: string
@@ -289,6 +291,7 @@ export type Database = {
           id?: string
           is_archived?: boolean
           last_plan_calculated_at?: string | null
+          linked_debt_id?: string | null
           monthly_commitment_cents?: number | null
           name?: string
           plan_status?: string
@@ -300,7 +303,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "goals_linked_debt_owner_fkey"
+            columns: ["linked_debt_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "debts"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -396,9 +407,11 @@ export type Database = {
       }
       transactions: {
         Row: {
+          allocation_applied_cents: number
           amount_cents: number
           bank_connection_id: string | null
           category: string
+          client_operation_id: string | null
           created_at: string
           debt_id: string | null
           description: string
@@ -415,9 +428,11 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          allocation_applied_cents?: number
           amount_cents: number
           bank_connection_id?: string | null
           category: string
+          client_operation_id?: string | null
           created_at?: string
           debt_id?: string | null
           description: string
@@ -434,9 +449,11 @@ export type Database = {
           user_id: string
         }
         Update: {
+          allocation_applied_cents?: number
           amount_cents?: number
           bank_connection_id?: string | null
           category?: string
+          client_operation_id?: string | null
           created_at?: string
           debt_id?: string | null
           description?: string
@@ -461,6 +478,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "transactions_debt_owner_fkey"
+            columns: ["debt_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "debts"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
             foreignKeyName: "transactions_goal_id_fkey"
             columns: ["goal_id"]
             isOneToOne: false
@@ -468,11 +492,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "transactions_goal_owner_fkey"
+            columns: ["goal_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
             foreignKeyName: "transactions_recurring_rule_id_fkey"
             columns: ["recurring_rule_id"]
             isOneToOne: false
             referencedRelation: "recurring_rules"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_recurring_rule_owner_fkey"
+            columns: ["recurring_rule_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_rules"
+            referencedColumns: ["id", "user_id"]
           },
         ]
       }
@@ -543,9 +581,11 @@ export type Database = {
           p_transaction_date?: string
         }
         Returns: {
+          allocation_applied_cents: number
           amount_cents: number
           bank_connection_id: string | null
           category: string
+          client_operation_id: string | null
           created_at: string
           debt_id: string | null
           description: string
@@ -577,9 +617,11 @@ export type Database = {
           p_transaction_date?: string
         }
         Returns: {
+          allocation_applied_cents: number
           amount_cents: number
           bank_connection_id: string | null
           category: string
+          client_operation_id: string | null
           created_at: string
           debt_id: string | null
           description: string
@@ -723,11 +765,69 @@ export type Database = {
         }
         Returns: Json
       }
+      create_quick_add_transaction: {
+        Args: {
+          p_amount_cents: number
+          p_category: string
+          p_client_operation_id: string
+          p_debt_id: string
+          p_description: string
+          p_goal_id: string
+          p_kind: Database["public"]["Enums"]["transaction_kind"]
+          p_notes: string
+          p_transaction_date: string
+        }
+        Returns: {
+          allocation_applied_cents: number
+          amount_cents: number
+          bank_connection_id: string | null
+          category: string
+          client_operation_id: string | null
+          created_at: string
+          debt_id: string | null
+          description: string
+          goal_id: string | null
+          id: string
+          kind: Database["public"]["Enums"]["transaction_kind"]
+          needs_review: boolean
+          notes: string | null
+          plaid_transaction_id: string | null
+          recurring_rule_id: string | null
+          source: Database["public"]["Enums"]["transaction_source"]
+          transaction_date: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "transactions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       delete_debt_permanently: { Args: { p_debt_id: string }; Returns: string }
       delete_goal_permanently: { Args: { p_goal_id: string }; Returns: string }
       delete_transaction_and_rebalance_goal: {
         Args: { p_transaction_id: string }
         Returns: string
+      }
+      get_transaction_summary: {
+        Args: {
+          p_amount_max_cents?: number
+          p_amount_min_cents?: number
+          p_category?: string
+          p_debt_id?: string
+          p_from?: string
+          p_kind?: Database["public"]["Enums"]["transaction_kind"]
+          p_search?: string
+          p_to?: string
+        }
+        Returns: {
+          expense_cents: number
+          income_cents: number
+          net_cents: number
+          transaction_count: number
+        }[]
       }
       process_due_recurring_rules: {
         Args: { p_through?: string; p_user_id?: string }
@@ -742,9 +842,11 @@ export type Database = {
           p_transaction_id: string
         }
         Returns: {
+          allocation_applied_cents: number
           amount_cents: number
           bank_connection_id: string | null
           category: string
+          client_operation_id: string | null
           created_at: string
           debt_id: string | null
           description: string
@@ -776,9 +878,51 @@ export type Database = {
           p_transaction_id: string
         }
         Returns: {
+          allocation_applied_cents: number
           amount_cents: number
           bank_connection_id: string | null
           category: string
+          client_operation_id: string | null
+          created_at: string
+          debt_id: string | null
+          description: string
+          goal_id: string | null
+          id: string
+          kind: Database["public"]["Enums"]["transaction_kind"]
+          needs_review: boolean
+          notes: string | null
+          plaid_transaction_id: string | null
+          recurring_rule_id: string | null
+          source: Database["public"]["Enums"]["transaction_source"]
+          transaction_date: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "transactions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      update_transaction_and_retarget: {
+        Args: {
+          p_amount_cents: number
+          p_category: string
+          p_debt_id: string
+          p_description: string
+          p_goal_id: string
+          p_kind: Database["public"]["Enums"]["transaction_kind"]
+          p_notes: string
+          p_transaction_date: string
+          p_transaction_id: string
+        }
+        Returns: {
+          allocation_applied_cents: number
+          amount_cents: number
+          bank_connection_id: string | null
+          category: string
+          client_operation_id: string | null
           created_at: string
           debt_id: string | null
           description: string

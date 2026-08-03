@@ -1,7 +1,7 @@
 import { normalizeError, AppError } from '../../../shared/api/errors';
 import { supabase } from '../../../shared/lib/supabase';
 import { today } from '../../../shared/utils/dates';
-import type { Json } from '../../../types/database.types';
+import type { Database, Json } from '../../../types/database.types';
 import { DEFAULT_QUICK_ADD_CHIPS } from '../constants/categories';
 import {
   quickAddChipsSchema,
@@ -58,15 +58,50 @@ function normalizeRecurringRuleDraftForInsert(draft: RecurringRuleDraft): Recurr
   };
 }
 
-type TransactionSummaryRpcRow = {
-  income_cents: number | string | null;
-  expense_cents: number | string | null;
-  net_cents: number | string | null;
-  transaction_count: number | string | null;
+type PublicFunctions = Database['public']['Functions'];
+type PublicFunctionName = keyof PublicFunctions;
+type PublicFunctionArgs<Name extends PublicFunctionName> = PublicFunctions[Name]['Args'];
+type PublicFunctionReturns<Name extends PublicFunctionName> = PublicFunctions[Name]['Returns'];
+
+type NullableRpcArgs<
+  Name extends PublicFunctionName,
+  Keys extends keyof PublicFunctionArgs<Name>,
+> = Omit<PublicFunctionArgs<Name>, Keys> & {
+  [Key in Keys]: PublicFunctionArgs<Name>[Key] | null;
 };
 
-type UntypedRpcClient = {
-  rpc: (name: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
+type TransactionRpc = {
+  (
+    name: 'create_quick_add_transaction',
+    args: NullableRpcArgs<
+      'create_quick_add_transaction',
+      'p_notes' | 'p_goal_id' | 'p_debt_id'
+    >,
+  ): PromiseLike<{
+    data: PublicFunctionReturns<'create_quick_add_transaction'> | null;
+    error: unknown;
+  }>;
+  (
+    name: 'get_transaction_summary',
+    args: {
+      [Key in keyof PublicFunctionArgs<'get_transaction_summary'>]?:
+        | PublicFunctionArgs<'get_transaction_summary'>[Key]
+        | null;
+    },
+  ): PromiseLike<{
+    data: PublicFunctionReturns<'get_transaction_summary'> | null;
+    error: unknown;
+  }>;
+  (
+    name: 'update_transaction_and_retarget',
+    args: NullableRpcArgs<
+      'update_transaction_and_retarget',
+      'p_notes' | 'p_goal_id' | 'p_debt_id'
+    >,
+  ): PromiseLike<{
+    data: PublicFunctionReturns<'update_transaction_and_retarget'> | null;
+    error: unknown;
+  }>;
 };
 
 function integerCents(value: number | string | null | undefined): number {
@@ -75,12 +110,11 @@ function integerCents(value: number | string | null | undefined): number {
 }
 
 /**
- * The generated database types cannot yet include the local-only RPCs. Keep the
- * narrow cast here, rather than widening Supabase or generated database types.
+ * Supabase's generated RPC arguments do not preserve SQL nullability. This
+ * adapter widens only the nullable parameters while retaining generated names,
+ * non-null arguments, and return contracts.
  */
-function localRpc(name: string, args: Record<string, unknown>) {
-  return (supabase as unknown as UntypedRpcClient).rpc(name, args);
-}
+const transactionRpc = supabase.rpc.bind(supabase) as TransactionRpc;
 
 export async function fetchTransactions(
   userId: string,
@@ -135,7 +169,7 @@ export async function fetchTransactionSummary(
 ): Promise<TransactionSummary> {
   const parsedFilters = transactionFiltersSchema.parse(filters);
   const searchTerm = parsedFilters.q ? sanitizeSearchTerm(parsedFilters.q) : null;
-  const { data, error } = await localRpc('get_transaction_summary', {
+  const { data, error } = await transactionRpc('get_transaction_summary', {
     p_from: parsedFilters.from ?? null,
     p_to: parsedFilters.to ?? null,
     p_category: parsedFilters.category ?? null,
@@ -149,15 +183,14 @@ export async function fetchTransactionSummary(
   });
 
   if (error) raise(error, 'Unable to load transaction summary');
-  const row = Array.isArray(data) ? data[0] : data;
-  const summary = (row ?? {}) as TransactionSummaryRpcRow;
+  const summary = data?.[0];
 
   // Transfers intentionally contribute zero to Income, Expenses, and Net.
   return {
-    income_cents: integerCents(summary.income_cents),
-    expense_cents: integerCents(summary.expense_cents),
-    net_cents: integerCents(summary.net_cents),
-    transaction_count: integerCents(summary.transaction_count),
+    income_cents: integerCents(summary?.income_cents),
+    expense_cents: integerCents(summary?.expense_cents),
+    net_cents: integerCents(summary?.net_cents),
+    transaction_count: integerCents(summary?.transaction_count),
   };
 }
 
@@ -224,7 +257,7 @@ export async function createQuickAddTransaction(
 ): Promise<Transaction> {
   void userId; // The RPC derives ownership from auth.uid(); retained for the feature API contract.
   const parsed = transactionDraftSchema.parse(draft);
-  const { data, error } = await localRpc('create_quick_add_transaction', {
+  const { data, error } = await transactionRpc('create_quick_add_transaction', {
     p_client_operation_id: clientOperationId,
     p_amount_cents: parsed.amount_cents,
     p_kind: parsed.kind,
@@ -237,7 +270,7 @@ export async function createQuickAddTransaction(
   });
 
   if (error) raise(error, 'Unable to create quick-add transaction');
-  return requiredRow(data as Transaction | null, 'Quick-add transaction was not created.');
+  return requiredRow(data, 'Quick-add transaction was not created.');
 }
 
 export async function updateTransaction(
@@ -262,7 +295,7 @@ export async function updateTransaction(
     );
   }
 
-  const { data, error } = await localRpc('update_transaction_and_retarget', {
+  const { data, error } = await transactionRpc('update_transaction_and_retarget', {
     p_transaction_id: transactionId,
     p_amount_cents: parsed.amount_cents,
     p_kind: parsed.kind,
@@ -275,7 +308,7 @@ export async function updateTransaction(
   });
 
   if (error) raise(error, 'Unable to update transaction');
-  return requiredRow(data as Transaction | null, 'Transaction was not updated.');
+  return requiredRow(data, 'Transaction was not updated.');
 }
 
 export async function deleteTransaction(userId: string, transactionId: string): Promise<string> {

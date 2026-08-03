@@ -106,8 +106,8 @@ function actionDestination(
 
   if (actionType === 'set_recurring_contribution' || actionType === 'confirm_contribution') {
     if (goalType === 'debt_payoff') {
-      const linkedDebtId = (goal as GoalPlanGoal & { linked_debt_id?: unknown }).linked_debt_id;
-      if (typeof linkedDebtId === 'string' && linkedDebtId.length > 0) {
+      const linkedDebtId = goal.linked_debt_id;
+      if (linkedDebtId) {
         return {
           actionHref: `/dashboard/transactions?new=1&debt_id=${encodeURIComponent(linkedDebtId)}`,
           actionLabel: 'Add debt payment',

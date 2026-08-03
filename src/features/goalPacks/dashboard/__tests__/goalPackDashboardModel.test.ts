@@ -17,6 +17,7 @@ const goal: GoalPlanGoal = {
   id: '00000000-0000-4000-8000-000000000001',
   is_archived: false,
   last_plan_calculated_at: '2026-06-30T00:00:00.000Z',
+  linked_debt_id: null,
   monthly_commitment_cents: 500_00,
   name: 'First home fund',
   plan_status: 'active',
