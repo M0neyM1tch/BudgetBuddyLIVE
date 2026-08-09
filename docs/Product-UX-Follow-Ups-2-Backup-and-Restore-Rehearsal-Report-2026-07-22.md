@@ -567,3 +567,41 @@ Browser QA was **not** performed during this local type-alignment task. The foll
 This task used only the already-generated local file and repository checks. It did not regenerate types, apply a migration, write database or Auth data, invoke or schedule cron, deploy an Edge Function, change Realtime or project configuration, or perform any other Supabase write. Production `BudgetBuddy-V2` (`cebykmbauxbucvforwzj`) and legacy `BudgetBuddy` (`yvsizxnfqkkazqnwbgnc`) remained untouched.
 
 Recommendation: **ready for manual push and browser QA**.
+
+## 2026-08-08 onboarding recurring-processing remediation
+
+The Git and target preflight began from a clean, synchronized `Product/UX-Follow-Ups-2` branch at `f24f004c4d2e6832be66058cd877a8201a3f6cb7`. Supabase independently identified the healthy target as `BudgBeacon-Rehearsal` (`gwloyvfkrxzgqnlnlcor`, `us-east-2`, PostgreSQL 17.6). Production `BudgetBuddy-V2` (`cebykmbauxbucvforwzj`) and legacy `BudgetBuddy` (`yvsizxnfqkkazqnwbgnc`) were distinct projects, were not selected for a project-scoped operation, and received no write.
+
+Read-only preflight found exactly 26 migration-ledger entries and no history mismatch. The project contained one existing test Auth user, one identity, and one preference row, with zero goals, debts, transactions, recurring rules, Storage buckets/objects, or Vault secrets. Active cron jobs/history were `0/0`; Realtime publication members and outbound trigger/function references were zero; `pg_net` was absent. All 10 application tables retained RLS and all 37 policies. `public.process_due_recurring_rules(uuid,date)` remained owned by `postgres`, `SECURITY DEFINER`, fixed to `search_path=public, pg_temp`, executable by `postgres` and `service_role`, and not executable by `PUBLIC`, `anon`, or `authenticated`.
+
+The root cause matched the browser evidence. The shared onboarding finalization path saves the starter setup and recurring rules, then invokes `process-recurring` whenever any selected rule has `start_date <= current_date`. Rehearsal had zero deployed Edge Functions, and its six recent invocation records were `OPTIONS 404` responses for `/functions/v1/process-recurring` with no function or deployment ID. The failure therefore occurred after the durable setup writes but before backdated transactions and onboarding completion, affecting every priority category through the same shared flow.
+
+The existing checked-in deployment payload was reviewed without modification:
+
+- `supabase/functions/process-recurring/index.ts`: 3,485 bytes, SHA-256 `39BA8BEA1814F8766D33DDD7C63546A4861420AFB48FEB3FDA12A2E40AA62B8A`;
+- `supabase/functions/_shared/cors.ts`: 2,030 bytes, SHA-256 `F947E7A5141CEF2F5598D54F570CB6F86941613270962A676F1995CAD0551B8E`.
+
+Only `process-recurring` was deployed, only to `gwloyvfkrxzgqnlnlcor`, as active version 1 with platform JWT verification enabled. Retrieval of the deployed bundle confirmed semantic equality with both checked-in files after transport newline normalization. No function source, project secret, database schema, migration, Auth setting, cron configuration, Realtime setting, webhook, SMTP setting, or external integration was changed.
+
+A credential-free browser-preflight probe from origin `http://localhost:5173` returned HTTP 200 with the same `Access-Control-Allow-Origin`, allowed `POST, OPTIONS` methods, and the expected Supabase client headers. A credential-free anonymous POST returned HTTP 401 before processing. Edge logs associated both results with rehearsal deployment version 1. This proves that the prior 404/preflight blocker is removed and that unauthenticated invocation remains rejected. The deployed source still validates the bearer token with Supabase Auth, derives `p_user_id` only from that verified user, and invokes the service-role-only SQL processor; no browser-supplied user ID is accepted. Authenticated service-role execution and cross-owner isolation were not claimed from static review alone.
+
+Hosted authenticated onboarding verification was not performed because the sole existing test account is not on a reserved email domain and no reserved-domain authenticated browser session was available. No credential, token, password, or private key was requested, inspected, copied, or recorded. No disposable user or application row was created, so no synthetic cleanup was necessary. Post-deployment counts remained one Auth user, one identity, one preference row, and zero goals, debts, transactions, or recurring rules; cron remained `0/0`. A later manual rehearsal session must use a reserved-domain synthetic account to confirm successful authenticated catch-up, transaction idempotency, completion, and cross-owner isolation.
+
+The local onboarding flow now handles recurring-processing failure as a distinct partial-success state. Setup, goal recalculation, recurring-rule creation, and onboarding-completion errors remain blocking. If only catch-up fails, the UI explicitly states that the starter plan and rules were saved and that due transactions remain pending. It offers `Retry transaction processing`, which retries only the processor without recreating setup or rules, and an explicit `Continue without transactions` choice that completes onboarding and opens Transactions. The processor continues to receive only the through date; authenticated identity remains an Edge Function responsibility. The `start_date <= today` behavior was preserved because no contrary product decision was supplied: past and today dates request immediate catch-up, while future dates do not.
+
+The debt-payment alignment change uses the compact helper copy `The amount you plan to pay each month.` and a scoped shared helper-text minimum block size for both payment fields at the two-column layout. The minimum resets at the existing single-column breakpoint, preserving natural wrapping on narrow screens. Alignment no longer depends only on the current copy length.
+
+Local validation passed:
+
+- focused onboarding suite: 1 file and 9 tests, covering all four priority categories, past/today/future dates, multi-batch catch-up, unavailable-function behavior, partial setup persistence, retry without duplicate setup/rule creation, explicit continuation, authenticated-user-ID non-injection, and payment helper alignment;
+- complete Vitest suite: 21 files and 78 tests;
+- TypeScript project compilation;
+- ESLint;
+- Vite production build;
+- `git diff --check`, project-reference review, and credential/secret-pattern review.
+
+Post-deployment advising introduced no Edge Function, RLS, or function-grant finding. Security still reports only the existing leaked-password-protection warning. Performance reports the four previously recorded informational unindexed composite foreign keys and six currently unused indexes; no database object was changed in response.
+
+Authenticated browser QA remains blocked only by the absence of a reserved-domain signed-in rehearsal session. The next manual step is to sign in with such a disposable synthetic account and exercise past, today, and future dates for each category; verify OPTIONS/POST success, expected transactions, completion, retry idempotency, and cross-owner isolation; then remove only the newly attributable artifacts and confirm the pre-test counts. Production and legacy remained untouched.
+
+Recommendation: **ready for local checkpoint and reserved-domain authenticated rehearsal QA**.
