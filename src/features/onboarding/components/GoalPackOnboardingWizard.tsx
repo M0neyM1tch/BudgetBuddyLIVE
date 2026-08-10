@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -474,6 +474,8 @@ export function GoalPackOnboardingWizard({ isOpen }: GoalPackOnboardingWizardPro
   const recalculateGoalPlanMutation = useRecalculateGoalPlan();
   const recurringRulesQuery = useRecurringRules();
   const submissionInFlightRef = useRef(false);
+  const completionRequestedRef = useRef(false);
+  const previousIsOpenRef = useRef(isOpen);
   const [stepIndex, setStepIndex] = useState(0);
   const [form, setForm] = useState<OnboardingForm>(() => createDefaultForm());
   const [clientError, setClientError] = useState<string | null>(null);
@@ -489,6 +491,13 @@ export function GoalPackOnboardingWizard({ isOpen }: GoalPackOnboardingWizardPro
     createRecurringRuleMutation.isPending ||
     processRecurringRulesMutation.isPending ||
     recalculateGoalPlanMutation.isPending;
+
+  useEffect(() => {
+    if (isOpen && !previousIsOpenRef.current) {
+      completionRequestedRef.current = false;
+    }
+    previousIsOpenRef.current = isOpen;
+  }, [isOpen]);
 
   function updateField<Key extends keyof OnboardingForm>(key: Key, value: OnboardingForm[Key]) {
     setClientError(null);
@@ -566,12 +575,24 @@ export function GoalPackOnboardingWizard({ isOpen }: GoalPackOnboardingWizardPro
     }));
   }
 
+  async function requestCompletion() {
+    if (completionRequestedRef.current) return;
+
+    completionRequestedRef.current = true;
+    try {
+      await completeMutation.mutateAsync();
+    } catch (error) {
+      completionRequestedRef.current = false;
+      throw error;
+    }
+  }
+
   async function completeWithoutPlan() {
-    await completeMutation.mutateAsync();
+    await requestCompletion();
   }
 
   async function completeOnboarding(destination = '/dashboard') {
-    await completeMutation.mutateAsync();
+    await requestCompletion();
     navigate(destination);
   }
 

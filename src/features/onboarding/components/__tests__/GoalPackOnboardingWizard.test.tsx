@@ -1,8 +1,10 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useEffect, useState } from 'react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GoalPackOnboardingWizard } from '../GoalPackOnboardingWizard';
+import { OnboardingWizard } from '../OnboardingWizard';
 
 const mocks = vi.hoisted(() => ({
   complete: vi.fn(),
@@ -123,6 +125,61 @@ beforeEach(() => {
   });
   HTMLDialogElement.prototype.close = vi.fn(function close(this: HTMLDialogElement) {
     this.removeAttribute('open');
+    this.dispatchEvent(new Event('close'));
+  });
+});
+
+describe('onboarding completion lifecycle', () => {
+  it('does not submit completion twice when the native close event follows the close action', async () => {
+    const closeWizard = vi.fn();
+    function ControlledWizard() {
+      const [isOpen, setIsOpen] = useState(true);
+      useEffect(() => {
+        closeWizard.mockImplementation(() => setIsOpen(false));
+      }, []);
+      return <GoalPackOnboardingWizard isOpen={isOpen} />;
+    }
+
+    mocks.complete.mockImplementation(async () => {
+      closeWizard();
+      return {};
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/dashboard/preferences']}>
+        <ControlledWizard />
+      </MemoryRouter>,
+    );
+
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Close modal' }));
+
+    await waitFor(() => expect(mocks.complete).toHaveBeenCalledTimes(1));
+  });
+
+  it('guards the legacy wizard against the same native close duplicate', async () => {
+    const closeWizard = vi.fn();
+    function ControlledWizard() {
+      const [isOpen, setIsOpen] = useState(true);
+      useEffect(() => {
+        closeWizard.mockImplementation(() => setIsOpen(false));
+      }, []);
+      return <OnboardingWizard isOpen={isOpen} />;
+    }
+
+    mocks.complete.mockImplementation(async () => {
+      closeWizard();
+      return {};
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/dashboard/preferences']}>
+        <ControlledWizard />
+      </MemoryRouter>,
+    );
+
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Close modal' }));
+
+    await waitFor(() => expect(mocks.complete).toHaveBeenCalledTimes(1));
   });
 });
 

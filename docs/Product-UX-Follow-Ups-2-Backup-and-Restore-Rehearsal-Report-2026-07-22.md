@@ -605,3 +605,43 @@ Post-deployment advising introduced no Edge Function, RLS, or function-grant fin
 Authenticated browser QA remains blocked only by the absence of a reserved-domain signed-in rehearsal session. The next manual step is to sign in with such a disposable synthetic account and exercise past, today, and future dates for each category; verify OPTIONS/POST success, expected transactions, completion, retry idempotency, and cross-owner isolation; then remove only the newly attributable artifacts and confirm the pre-test counts. Production and legacy remained untouched.
 
 Recommendation: **ready for local checkpoint and reserved-domain authenticated rehearsal QA**.
+
+## 2026-08-09 persisted clean-slate reset repair
+
+### Diagnosis and exact write sequence
+
+The diagnosis began from `Product/UX-Follow-Ups-2` at `0619bb4c86cfbb243dbaa7a082086d1a03488008`, with a clean branch synchronized to its upstream. Read-only project verification identified only `BudgBeacon-Rehearsal` (`gwloyvfkrxzgqnlnlcor`, `us-east-2`). Production and legacy were not selected or written.
+
+The reset API already sent the intended contract. Both `resetOnboardingPreferences()` and `resetOnboardingWithCleanSlate()` upsert `onboarding_completed_at: null`; the clean-slate variant also resets dismissed tips and quick-add chips after deleting only the authenticated owner's application rows. `useResetOnboardingWithCleanSlate()` puts the returned preference object into the React Query cache and invalidates workspace queries. `OnboardingRoot` opens the wizard only when the cached or fetched `onboarding_completed_at` is `null`.
+
+The competing write was in the wizard close lifecycle, not in PostgREST null handling. `GoalPackOnboardingWizard` passed an `onClose` callback to the shared `Modal`; with no pending recurring catch-up, that callback called `completeWithoutPlan()`, which upserted a fresh completion timestamp. The shared `Modal` invokes that callback from its header close button and from the native dialog `onCancel`/`onClose` events. After the first completion succeeds, the preference cache becomes non-null, `isOpen` becomes false, and `Modal` calls `dialog.close()`. That native close event invoked the same completion callback a second time. Thus a clean-slate reset could briefly return/open with `NULL`, then a user closing the newly opened wizard restored the old completed state (and often produced two timestamp upserts).
+
+The rehearsal API log sequence, sanitized to method/status/operation, matched that explanation: a reset `POST 200` followed by a `GET 200`, then two near-consecutive `POST 200` preference upserts after the wizard was closed. API logs do not include request or response bodies, so they were not used to expose IDs or timestamps. The immediate wizard opening is independently proof that the reset result placed `NULL` in the cache, and the source path identifies the later timestamp writer.
+
+### Narrow repair
+
+`GoalPackOnboardingWizard.tsx` and the legacy `OnboardingWizard.tsx` now route every completion path through one session-scoped `requestCompletion()` latch. They ignore the duplicate native close callback after a successful completion, reset the latch when a newly opened wizard represents a new onboarding session, and release the latch if the completion request fails so the user can retry. Setup, recurring processing, retry/continue behavior, navigation, RLS, and the database schema are unchanged. No migration, Auth setting, Edge Function, grant, policy, or direct database write was introduced.
+
+### Regression coverage and static validation
+
+- Added `src/features/onboarding/api/onboarding.api.test.ts`: clean-slate and standard resets send explicit `NULL`, returned preferences preserve `NULL`, repeated resets are idempotent, and normal completion still persists a supplied timestamp.
+- Extended `GoalPackOnboardingWizard.test.tsx` with controlled `isOpen` transitions for both onboarding components; each fires the native close event after completion and proves only one completion mutation is sent. Existing recurring catch-up, retry, continuation, date, category, and payment-alignment tests remain green.
+- Focused Vitest: 2 files and 15 tests passed.
+- Complete Vitest: 22 files and 84 tests passed.
+- `npm run typecheck`, `npm run lint`, `npm run build`, `git diff --check`, and the credential/secret-pattern review passed. No dependency, lockfile, environment, migration, generated-type, or project-link file changed.
+
+### Authenticated rehearsal proof (QA-A)
+
+The existing synthetic QA-A browser session began with zero goals, debts, transactions, recurring rules, priorities, actions, or snapshots and a completed preference timestamp. A normal clean-slate reset opened the wizard immediately; read-only aggregate checks showed one `NULL` preference and one completed preference across the two synthetic accounts, with all application-row counts at zero. The same counts remained after settling, and a hard reload continued to show the wizard, proving that cache and persisted state now agree.
+
+QA-A was then re-onboarded with a future first occurrence (so no catch-up was requested). The wizard completed and navigated to Dashboard; read-only state showed one goal, two recurring rules, one priority, two actions, and one snapshot, with no debt or transaction rows. The completion timestamp was non-null and a hard reload kept the wizard closed. A second normal clean-slate reset removed those rows, returned the wizard, and again left one `NULL` preference across the two accounts after settling and after hard reload.
+
+The post-fix rehearsal API log for that completion contained one preference `POST 200` followed by its `GET 200`; the duplicate timestamp POST seen before the repair did not recur.
+
+QA-B manual verification completed the second-account contract check. Test A used the normal clean-slate reset, observed `onboarding_completed_at = NULL`, and then hard refreshed without closing, skipping, or completing onboarding; the wizard reappeared and the value remained `NULL`. Test B intentionally closed/exited the wizard and hard refreshed; the wizard stayed closed and the completion timestamp became non-NULL, which is the intended explicit-exit behavior. Test C performed a final clean-slate reset; the timestamp returned to `NULL` and the fresh onboarding state was restored.
+
+The final read-only rehearsal check found two Auth users, two identities, two profiles, and two preference rows. Both preference rows had `onboarding_completed_at IS NULL`. Goals, debts, transactions, recurring rules, financial priorities, goal actions, and goal plan snapshots were all zero. Active cron jobs and cron-history rows remained `0 / 0`. The only deployed Edge Function remained `process-recurring`, active with JWT verification enabled.
+
+No Retry/Continue-without-transactions failure-path QA was claimed here; that remains a separate follow-up from the recurring-processing remediation. Production `BudgetBuddy-V2` (`cebykmbauxbucvforwzj`) and legacy `BudgetBuddy` (`yvsizxnfqkkazqnwbgnc`) remained untouched.
+
+Recommendation: **ready to resume recurring failure-path QA**.
