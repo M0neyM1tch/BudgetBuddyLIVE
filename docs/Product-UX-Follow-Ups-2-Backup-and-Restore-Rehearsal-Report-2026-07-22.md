@@ -645,3 +645,23 @@ The final read-only rehearsal check found two Auth users, two identities, two pr
 No Retry/Continue-without-transactions failure-path QA was claimed here; that remains a separate follow-up from the recurring-processing remediation. Production `BudgetBuddy-V2` (`cebykmbauxbucvforwzj`) and legacy `BudgetBuddy` (`yvsizxnfqkkazqnwbgnc`) remained untouched.
 
 Recommendation: **ready to resume recurring failure-path QA**.
+
+## 2026-08-26 final browser-matrix disposition
+
+The completed Product/UX Follow-Ups 2 browser matrix is closed at **16 PASS, 1 deferred LOW, 0 BLOCKED**. The single remaining result is formally reclassified as follows.
+
+### Deferred Known Issue — Transaction Search Punctuation
+
+**Severity:** LOW
+
+**Status:** Known non-blocking limitation — deferred
+
+**Release impact:** Does not block `Product/UX-Follow-Ups-2`
+
+Transaction search currently normalizes certain punctuation characters. A transaction such as `QA FINFLOW Rent (August), 100%` is persisted correctly and can be found with an ordinary term such as `Rent`, but a full-string search containing `%`, commas, or parentheses may not match. This causes no data-integrity, authorization, accounting, financial-summary, or list/summary divergence. Financial calculations, allocations, ownership enforcement, transaction summaries, and ordinary filtering are unaffected.
+
+Later remediation must be one coordinated application/database release. The application search must preserve meaningful punctuation, safely represent user-controlled text in PostgREST `.or(...)` grammar, support literal commas, parentheses, periods, apostrophes, `%`, and `_`, prevent filter-grammar injection, and retain case-insensitive substring matching. The database half must be a new additive migration after `20260721194410`; it must not edit an applied migration. It must `CREATE OR REPLACE public.get_transaction_summary(...)` without changing its signature, return shape, `auth.uid()` ownership, validation, non-search filters, Income/Expense/Net semantics, security/search-path properties, or grants. It must normalize repeated whitespace only, escape the selected `ILIKE` escape character plus user `%` and `_`, preserve implementation-added outer `%...%` wildcards, and use explicit SQL `ESCAPE`.
+
+Required later regression coverage is list/RPC parity, `%`, `_`, comma, parentheses, period, apostrophe, repeated whitespace, malformed-filter resistance, rehearsal-first migration, focused browser QA, and coordinated application/migration release.
+
+> **No search-remediation migration is included in the current production release.**
