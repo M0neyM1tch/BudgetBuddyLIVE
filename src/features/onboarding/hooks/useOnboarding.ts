@@ -47,17 +47,11 @@ function getCachedPreferences(userId: string): OnboardingPreferences | undefined
   return queryClient.getQueryData<OnboardingPreferences>(onboardingKeys.preferences(userId));
 }
 
-async function invalidateWorkspaceSurfaces(userId: string) {
-  await Promise.all([
-    queryClient.invalidateQueries({ queryKey: onboardingKeys.preferences(userId) }),
-    queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
-    queryClient.invalidateQueries({ queryKey: ['transactions'] }),
-    queryClient.invalidateQueries({ queryKey: ['analytics'] }),
-    queryClient.invalidateQueries({ queryKey: ['goals'] }),
-    queryClient.invalidateQueries({ queryKey: ['debts'] }),
-    queryClient.invalidateQueries({ queryKey: ['calculator'] }),
-    queryClient.invalidateQueries({ queryKey: ['goal-packs'] }),
-  ]);
+function workspaceQueryKeys(userId: string) {
+  return [
+    onboardingKeys.preferences(userId), ['dashboard'], ['transactions'], ['analytics'],
+    ['goals'], ['debts'], ['calculator'], ['goal-packs'],
+  ];
 }
 
 export function useOnboardingPreferences() {
@@ -104,14 +98,28 @@ export function useResetOnboardingWithCleanSlate() {
   const userId = useAuth().user?.id ?? null;
 
   return useMutation({
+    // Retrying an unconfirmed commit could erase newly entered data.
+    retry: false,
+    onMutate: async () => {
+      if (userId) {
+        await Promise.all(workspaceQueryKeys(userId).map((queryKey) =>
+          queryClient.cancelQueries({ queryKey })));
+      }
+    },
     mutationFn: () => {
       if (!userId) throw new Error('You must be signed in to reset onboarding.');
-      writeLocalDismissedTooltips([]);
       return resetOnboardingWithCleanSlate(userId);
     },
-    onSuccess: async (preferences) => {
+    onSuccess: (preferences) => {
+      writeLocalDismissedTooltips([]);
       queryClient.setQueryData(onboardingKeys.preferences(preferences.user_id), preferences);
-      await invalidateWorkspaceSurfaces(preferences.user_id);
+    },
+    onSettled: async () => {
+      // Also reconcile an error whose HTTP response was lost after a commit.
+      if (userId) {
+        await Promise.all(workspaceQueryKeys(userId).map((queryKey) =>
+          queryClient.invalidateQueries({ queryKey })));
+      }
     },
   });
 }

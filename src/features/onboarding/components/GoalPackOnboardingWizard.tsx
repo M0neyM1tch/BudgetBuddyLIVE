@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -441,7 +441,6 @@ function currentAmountForReview(form: OnboardingForm): number | null {
 }
 
 function monthlyContributionForReview(form: OnboardingForm): number | null {
-  if (form.priorityType === 'debt_payoff') return positiveCents(form.debtMinimumPayment);
   return positiveCents(form.monthlyCommitment);
 }
 
@@ -475,9 +474,12 @@ export function GoalPackOnboardingWizard({ isOpen }: GoalPackOnboardingWizardPro
   const recalculateGoalPlanMutation = useRecalculateGoalPlan();
   const recurringRulesQuery = useRecurringRules();
   const submissionInFlightRef = useRef(false);
+  const completionRequestedRef = useRef(false);
+  const previousIsOpenRef = useRef(isOpen);
   const [stepIndex, setStepIndex] = useState(0);
   const [form, setForm] = useState<OnboardingForm>(() => createDefaultForm());
   const [clientError, setClientError] = useState<string | null>(null);
+  const [hasPendingRecurringCatchup, setHasPendingRecurringCatchup] = useState(false);
   const [recurringRuleEdits, setRecurringRuleEdits] = useState<
     Record<string, RecurringRuleReviewEdit>
   >({});
@@ -489,6 +491,13 @@ export function GoalPackOnboardingWizard({ isOpen }: GoalPackOnboardingWizardPro
     createRecurringRuleMutation.isPending ||
     processRecurringRulesMutation.isPending ||
     recalculateGoalPlanMutation.isPending;
+
+  useEffect(() => {
+    if (isOpen && !previousIsOpenRef.current) {
+      completionRequestedRef.current = false;
+    }
+    previousIsOpenRef.current = isOpen;
+  }, [isOpen]);
 
   function updateField<Key extends keyof OnboardingForm>(key: Key, value: OnboardingForm[Key]) {
     setClientError(null);
@@ -566,8 +575,25 @@ export function GoalPackOnboardingWizard({ isOpen }: GoalPackOnboardingWizardPro
     }));
   }
 
+  async function requestCompletion() {
+    if (completionRequestedRef.current) return;
+
+    completionRequestedRef.current = true;
+    try {
+      await completeMutation.mutateAsync();
+    } catch (error) {
+      completionRequestedRef.current = false;
+      throw error;
+    }
+  }
+
   async function completeWithoutPlan() {
-    await completeMutation.mutateAsync();
+    await requestCompletion();
+  }
+
+  async function completeOnboarding(destination = '/dashboard') {
+    await requestCompletion();
+    navigate(destination);
   }
 
   async function processRecurringCatchup() {
@@ -622,10 +648,61 @@ export function GoalPackOnboardingWizard({ isOpen }: GoalPackOnboardingWizardPro
       });
       const shouldBackdateRecurringRules = await createSelectedRecurringRules();
       if (shouldBackdateRecurringRules) {
-        await processRecurringCatchup();
+        try {
+          await processRecurringCatchup();
+        } catch {
+          processRecurringRulesMutation.reset();
+          setHasPendingRecurringCatchup(true);
+          setClientError(
+            'Your starter plan and recurring rules were saved, but due transactions are still pending. Retry transaction processing now, or continue without the backdated transactions.',
+          );
+          return;
+        }
       }
-      await completeMutation.mutateAsync();
-      navigate('/dashboard');
+      await completeOnboarding();
+    } catch (error) {
+      setClientError(errorMessage(error));
+    } finally {
+      submissionInFlightRef.current = false;
+    }
+  }
+
+  async function retryRecurringCatchup() {
+    if (submissionInFlightRef.current || isSubmitting) return;
+
+    submissionInFlightRef.current = true;
+    setClientError(null);
+
+    try {
+      try {
+        await processRecurringCatchup();
+      } catch {
+        processRecurringRulesMutation.reset();
+        setClientError(
+          'Due transactions are still pending. Retry when the recurring service is available, or continue without the backdated transactions.',
+        );
+        return;
+      }
+
+      setHasPendingRecurringCatchup(false);
+      try {
+        await completeOnboarding();
+      } catch (error) {
+        setClientError(errorMessage(error));
+      }
+    } finally {
+      submissionInFlightRef.current = false;
+    }
+  }
+
+  async function continueWithPendingTransactions() {
+    if (submissionInFlightRef.current || isSubmitting) return;
+
+    submissionInFlightRef.current = true;
+    setClientError(null);
+
+    try {
+      await completeOnboarding('/dashboard/transactions');
     } catch (error) {
       setClientError(errorMessage(error));
     } finally {
@@ -656,11 +733,26 @@ export function GoalPackOnboardingWizard({ isOpen }: GoalPackOnboardingWizardPro
       title="Priority setup"
       className="onboarding-wizard-modal onboarding-wizard-modal--wide"
       onClose={() => {
+        if (hasPendingRecurringCatchup) {
+          void continueWithPendingTransactions();
+          return;
+        }
         void completeWithoutPlan();
       }}
       footer={
         <>
-          {stepIndex > 0 ? (
+          {hasPendingRecurringCatchup ? (
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={isSubmitting}
+              onClick={() => {
+                void continueWithPendingTransactions();
+              }}
+            >
+              Continue without transactions
+            </Button>
+          ) : stepIndex > 0 ? (
             <Button
               type="button"
               variant="ghost"
@@ -686,10 +778,18 @@ export function GoalPackOnboardingWizard({ isOpen }: GoalPackOnboardingWizardPro
             isLoading={isSubmitting}
             disabled={isSubmitting}
             onClick={() => {
+              if (hasPendingRecurringCatchup) {
+                void retryRecurringCatchup();
+                return;
+              }
               void handlePrimaryAction();
             }}
           >
-            {isLastStep ? 'Create plan' : 'Next'}
+            {hasPendingRecurringCatchup
+              ? 'Retry transaction processing'
+              : isLastStep
+                ? 'Create plan'
+                : 'Next'}
           </Button>
         </>
       }
@@ -831,8 +931,20 @@ export function GoalPackOnboardingWizard({ isOpen }: GoalPackOnboardingWizardPro
                       onChange={(event) => updateField('debtInterestRate', event.target.value)}
                     />
                   </label>
-                  <label className="priority-form-field">
-                    <span>Minimum payment</span>
+                  <label className="priority-form-field priority-form-field--payment">
+                    <span>Planned monthly payment</span>
+                    <small>The amount you plan to pay each month.</small>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="250.00"
+                      value={form.monthlyCommitment}
+                      onChange={(event) => updateField('monthlyCommitment', event.target.value)}
+                    />
+                  </label>
+                  <label className="priority-form-field priority-form-field--payment">
+                    <span>Required minimum payment</span>
+                    <small>The contractual minimum due for this debt each month.</small>
                     <input
                       type="text"
                       inputMode="decimal"

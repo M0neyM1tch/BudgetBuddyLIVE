@@ -71,6 +71,7 @@ describe('buildGoalAwareAnalyticsModel', () => {
 
     expect(model.planStatus.tone).toBe('good');
     expect(model.metrics.find((metric) => metric.label === 'Monthly gap')?.value).toBe('Covered');
+    expect(model.metrics.some((metric) => metric.label === 'Confidence')).toBe(false);
   });
 
   it('explains cash-flow tightening and category increases against the prior period', () => {

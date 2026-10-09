@@ -1,5 +1,6 @@
-import { AlertCircle, CalendarCheck, Landmark, Scale, TrendingDown } from 'lucide-react';
+import { CalendarCheck, Landmark, Scale, TrendingDown } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { ProjectedResultDisclosure } from '../../../shared/components/ui/ProjectedResultDisclosure';
 import { centsToDisplay } from '../../../shared/utils/currency';
 import { formatDisplay } from '../../../shared/utils/dates';
 import {
@@ -55,11 +56,6 @@ export function DebtPayoffPlanner({ debts }: DebtPayoffPlannerProps) {
           Compare avalanche and snowball as common payoff approaches using your active debt
           balances, APRs, minimum payments, and an editable extra-payment scenario.
         </p>
-        <p className="debt-planner-disclosure">
-          <AlertCircle size={15} aria-hidden="true" />
-          This comparison is an estimate, not a recommendation to choose a payoff method,
-          refinance, consolidate debt, or change a credit product.
-        </p>
       </div>
 
       <div className="debt-planner-controls">
@@ -110,7 +106,10 @@ export function DebtPayoffPlanner({ debts }: DebtPayoffPlannerProps) {
       <div className="debt-planner-results">
         <article>
           <CalendarCheck size={19} aria-hidden="true" />
-          <p>Debt-free date</p>
+          <p className="debt-planner-result-label">
+            Debt-free date
+            {selectedPlan.debtFreeDate ? <ProjectedResultDisclosure /> : null}
+          </p>
           <strong>
             {selectedPlan.debtFreeDate ? formatDisplay(selectedPlan.debtFreeDate) : 'Not projected'}
           </strong>
@@ -118,13 +117,19 @@ export function DebtPayoffPlanner({ debts }: DebtPayoffPlannerProps) {
         </article>
         <article>
           <Landmark size={19} aria-hidden="true" />
-          <p>Total interest</p>
+          <p className="debt-planner-result-label">
+            Total interest
+            <ProjectedResultDisclosure label="Show projected interest estimate details" />
+          </p>
           <strong>{centsToDisplay(selectedPlan.totalInterestCents)}</strong>
           <small>{centsToDisplay(interestSavings)} vs alternate</small>
         </article>
         <article>
           <TrendingDown size={19} aria-hidden="true" />
-          <p>Total paid</p>
+          <p className="debt-planner-result-label">
+            Total paid
+            <ProjectedResultDisclosure label="Show projected total paid estimate details" />
+          </p>
           <strong>{centsToDisplay(selectedPlan.totalPaidCents)}</strong>
           <small>{strategyLabel(strategy)} selected</small>
         </article>
@@ -141,7 +146,12 @@ export function DebtPayoffPlanner({ debts }: DebtPayoffPlannerProps) {
           <thead>
             <tr>
               <th>Month</th>
-              <th>Projected balance</th>
+              <th>
+                <span className="debt-planner-result-label">
+                  Projected balance
+                  <ProjectedResultDisclosure label="Show projected balance estimate details" />
+                </span>
+              </th>
               <th>Interest</th>
               <th>Paid</th>
             </tr>

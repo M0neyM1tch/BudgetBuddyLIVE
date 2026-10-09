@@ -1,5 +1,6 @@
-import { AlertCircle, CalendarCheck, FastForward, PiggyBank, Target } from 'lucide-react';
+import { CalendarCheck, FastForward, PiggyBank, Target } from 'lucide-react';
 import { useState } from 'react';
+import { ProjectedResultDisclosure } from '../../../shared/components/ui/ProjectedResultDisclosure';
 import { centsToDisplay } from '../../../shared/utils/currency';
 import { formatDisplay } from '../../../shared/utils/dates';
 import type { Transaction } from '../../transactions';
@@ -61,11 +62,6 @@ export function GoalTimelineProjector({
         <p>
           Estimate finish dates from current balances and goal-linked contribution
           history. Adjust the monthly contribution to model a new pace.
-        </p>
-        <p className="goal-planner-disclosure">
-          <AlertCircle size={15} aria-hidden="true" />
-          Timeline outputs are estimates based on user-entered goals and transaction history.
-          They are planning aids, not financial, tax, mortgage, legal, or investment advice.
         </p>
       </div>
 
@@ -132,7 +128,10 @@ export function GoalTimelineProjector({
         <div className="goal-planner-results">
           <article>
             <CalendarCheck size={19} aria-hidden="true" />
-            <p>Estimated finish</p>
+            <p className="goal-planner-result-label">
+              Estimated finish
+              {projection.estimatedFinishDate ? <ProjectedResultDisclosure /> : null}
+            </p>
             <strong>
               {projection.estimatedFinishDate
                 ? formatDisplay(projection.estimatedFinishDate)
@@ -151,7 +150,10 @@ export function GoalTimelineProjector({
           </article>
           <article>
             <FastForward size={19} aria-hidden="true" />
-            <p>If +$100/month</p>
+            <p className="goal-planner-result-label">
+              If +$100/month
+              <ProjectedResultDisclosure label="Show contribution scenario estimate details" />
+            </p>
             <strong>
               {projection.timeSavedMonths === null
                 ? 'Add contribution'
@@ -160,7 +162,10 @@ export function GoalTimelineProjector({
           </article>
           {projection.requiredMonthlyCents !== null ? (
             <article>
-              <p>Required for target date</p>
+              <p className="goal-planner-result-label">
+                Required for target date
+                <ProjectedResultDisclosure />
+              </p>
               <strong>{centsToDisplay(projection.requiredMonthlyCents)}</strong>
             </article>
           ) : null}

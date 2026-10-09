@@ -1,4 +1,5 @@
 import './DashboardPage.css';
+import { normalizeError } from '../../../shared/api/errors';
 import { env } from '../../../shared/lib/env';
 import { DebtsSnapshot } from '../components/DebtsSnapshot';
 import { DashboardGreeting } from '../components/DashboardGreeting';
@@ -33,6 +34,7 @@ export function DashboardPage() {
       <KpiStrip
         data={kpisQuery.data}
         error={kpisQuery.isError}
+        errorMessage={kpisQuery.error ? normalizeError(kpisQuery.error).message : undefined}
         isLoading={kpisQuery.isLoading}
         onRetry={() => void kpisQuery.refetch()}
       />

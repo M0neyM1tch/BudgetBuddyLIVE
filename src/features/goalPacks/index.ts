@@ -57,6 +57,7 @@ export {
   useUpdateGoalPlanFields,
   useUpsertFinancialPriority,
 } from './hooks/useGoalPacks';
+export { goalPackQueryRoot } from './public';
 export type {
   CompleteGoalActionOptions,
   CompleteGoalActionResult,

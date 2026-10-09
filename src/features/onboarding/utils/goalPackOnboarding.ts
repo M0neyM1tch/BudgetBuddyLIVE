@@ -231,9 +231,7 @@ export function buildGoalPackOnboardingPlan(
     draft.priorityType === 'debt_payoff' && 'debtBalanceCents' in target
       ? (target as DebtOnboardingTarget)
       : null;
-  const monthlyCommitmentCents = debtTarget
-    ? debtTarget.debtMinimumPaymentCents
-    : (optionalCents(draft.monthlyCommitment) ?? null);
+  const monthlyCommitmentCents = optionalCents(draft.monthlyCommitment) ?? null;
   const targetDate = draft.targetDate || null;
   const goalName = priorityName(draft.priorityType, draft.goalName);
   const debtDraft: DebtDraft | null =

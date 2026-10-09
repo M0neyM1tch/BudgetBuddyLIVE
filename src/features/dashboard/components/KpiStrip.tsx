@@ -6,18 +6,19 @@ import { KpiCard } from './KpiCard';
 type KpiStripProps = {
   data?: DashboardKpis;
   error?: boolean;
+  errorMessage?: string;
   isLoading: boolean;
   onRetry: () => void;
 };
 
-export function KpiStrip({ data, error = false, isLoading, onRetry }: KpiStripProps) {
+export function KpiStrip({ data, error = false, errorMessage, isLoading, onRetry }: KpiStripProps) {
   if (error) {
     return (
       <section className="dashboard-kpi-error" aria-label="Dashboard totals error">
         <div>
           <p className="section-kicker">Dashboard totals</p>
           <h3>Totals could not be loaded</h3>
-          <p>Try again before making decisions from this dashboard.</p>
+          <p>{errorMessage ?? 'Try again before making decisions from this dashboard.'}</p>
         </div>
         <Button type="button" variant="secondary" onClick={onRetry}>
           Retry

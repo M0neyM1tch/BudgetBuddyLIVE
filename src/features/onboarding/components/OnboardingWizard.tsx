@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Check, CreditCard, LayoutDashboard, Plus, Target, WalletCards } from 'lucide-react';
 import { Button } from '../../../shared/components/ui/Button';
@@ -57,13 +57,34 @@ type OnboardingWizardProps = {
 export function OnboardingWizard({ isOpen }: OnboardingWizardProps) {
   const navigate = useNavigate();
   const completeMutation = useCompleteOnboarding();
+  const completionRequestedRef = useRef(false);
+  const previousIsOpenRef = useRef(isOpen);
   const [stepIndex, setStepIndex] = useState(0);
   const step = STEPS[stepIndex];
   const isLastStep = stepIndex === STEPS.length - 1;
   const { Icon } = step;
 
+  useEffect(() => {
+    if (isOpen && !previousIsOpenRef.current) {
+      completionRequestedRef.current = false;
+    }
+    previousIsOpenRef.current = isOpen;
+  }, [isOpen]);
+
+  async function requestCompletion() {
+    if (completionRequestedRef.current) return;
+
+    completionRequestedRef.current = true;
+    try {
+      await completeMutation.mutateAsync();
+    } catch (error) {
+      completionRequestedRef.current = false;
+      throw error;
+    }
+  }
+
   async function complete(route?: string | null) {
-    await completeMutation.mutateAsync();
+    await requestCompletion();
     if (route) navigate(route);
   }
 
@@ -83,7 +104,7 @@ export function OnboardingWizard({ isOpen }: OnboardingWizardProps) {
       title="Welcome"
       className="onboarding-wizard-modal"
       onClose={() => {
-        void completeMutation.mutateAsync();
+        void requestCompletion();
       }}
       footer={
         <>
@@ -91,7 +112,7 @@ export function OnboardingWizard({ isOpen }: OnboardingWizardProps) {
             type="button"
             variant="ghost"
             onClick={() => {
-              void completeMutation.mutateAsync();
+              void requestCompletion();
             }}
           >
             Skip

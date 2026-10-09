@@ -227,7 +227,6 @@ function TransactionModalContent({
         <label className="transaction-form-field">
           <span>Category</span>
           <select
-            disabled={Boolean(transaction?.goal_id || transaction?.debt_id)}
             value={
               form.goalId
                 ? `goal:${form.goalId}`

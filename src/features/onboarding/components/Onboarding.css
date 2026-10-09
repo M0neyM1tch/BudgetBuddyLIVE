@@ -111,6 +111,10 @@
   line-height: 1.5;
 }
 
+.priority-form-field--payment small {
+  min-block-size: calc(2 * 1.5em);
+}
+
 .priority-form-field input,
 .priority-form-field select {
   background: var(--color-surface);
@@ -454,5 +458,9 @@
 
   .onboarding-review-rule-fields {
     grid-template-columns: 1fr;
+  }
+
+  .priority-form-field--payment small {
+    min-block-size: 0;
   }
 }

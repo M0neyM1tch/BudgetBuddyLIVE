@@ -1,4 +1,5 @@
 import { normalizeError, AppError } from '../../../shared/api/errors';
+import { requireCompleteRows } from '../../../shared/api/completeRows';
 import { supabase } from '../../../shared/lib/supabase';
 import {
   debtProgress,
@@ -22,17 +23,17 @@ export async function fetchAnalyticsTransactions(
   userId: string,
   range: DateRange,
 ): Promise<AnalyticsTransaction[]> {
-  const { data, error } = await supabase
+  const result = await supabase
     .from('transactions')
-    .select('id, transaction_date, amount_cents, kind, category')
+    .select('id, transaction_date, amount_cents, kind, category', { count: 'exact' })
     .eq('user_id', userId)
     .gte('transaction_date', range.from)
     .lte('transaction_date', range.to)
     .order('transaction_date', { ascending: true });
 
-  if (error) raise(error, 'Unable to load analytics transactions');
+  if (result.error) raise(result.error, 'Unable to load analytics transactions');
 
-  return (data ?? []).map((transaction) => ({
+  return requireCompleteRows(result, 'analytics transaction history').map((transaction) => ({
     id: transaction.id,
     date: transaction.transaction_date,
     amountCents: transaction.amount_cents,
@@ -42,16 +43,16 @@ export async function fetchAnalyticsTransactions(
 }
 
 export async function fetchAnalyticsGoals(userId: string): Promise<AnalyticsGoalSnapshot[]> {
-  const { data, error } = await supabase
+  const result = await supabase
     .from('goals')
-    .select('id, name, icon, color, current_amount_cents, target_amount_cents')
+    .select('id, name, icon, color, current_amount_cents, target_amount_cents', { count: 'exact' })
     .eq('user_id', userId)
     .eq('is_archived', false);
 
-  if (error) raise(error, 'Unable to load analytics goals');
+  if (result.error) raise(result.error, 'Unable to load analytics goals');
 
   return sortGoalsByProgress(
-    (data ?? []).map((goal) => ({
+    requireCompleteRows(result, 'analytics goals').map((goal) => ({
       id: goal.id,
       name: goal.name,
       icon: goal.icon,
@@ -64,16 +65,16 @@ export async function fetchAnalyticsGoals(userId: string): Promise<AnalyticsGoal
 }
 
 export async function fetchAnalyticsDebts(userId: string): Promise<AnalyticsDebtSnapshot[]> {
-  const { data, error } = await supabase
+  const result = await supabase
     .from('debts')
-    .select('id, name, icon, color, principal_cents, current_balance_cents, interest_rate_basis_points')
+    .select('id, name, icon, color, principal_cents, current_balance_cents, interest_rate_basis_points', { count: 'exact' })
     .eq('user_id', userId)
     .eq('is_archived', false);
 
-  if (error) raise(error, 'Unable to load analytics debts');
+  if (result.error) raise(result.error, 'Unable to load analytics debts');
 
   return sortDebtsByInterest(
-    (data ?? []).map((debt) => {
+    requireCompleteRows(result, 'analytics debts').map((debt) => {
       const paidCents = Math.max(0, debt.principal_cents - debt.current_balance_cents);
 
       return {

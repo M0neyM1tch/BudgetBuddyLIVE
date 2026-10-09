@@ -1,20 +1,14 @@
-import { AlertCircle, ArrowRight, CheckCircle2, RefreshCw, Target, X } from 'lucide-react';
+import { AlertCircle, ArrowRight, CheckCircle2, RefreshCw, Target } from 'lucide-react';
 import type { CSSProperties } from 'react';
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../../../shared/components/ui/Button';
+import { ProjectedResultDisclosure } from '../../../shared/components/ui/ProjectedResultDisclosure';
 import { centsToDisplay } from '../../../shared/utils/currency';
 import {
-  useCompleteGoalAction,
-  useDismissGoalAction,
   useGoalPackDashboard,
   useRecalculateActiveGoalPlan,
 } from '../hooks/useGoalPacks';
 import { buildGoalPackDashboardModel } from './goalPackDashboardModel';
-import {
-  buildGoalPackMomentumReward,
-  type GoalPackMomentumReward,
-} from './goalPackMomentumModel';
 import './GoalPackDashboard.css';
 
 function toneIcon(tone: 'good' | 'watch' | 'risk' | 'neutral') {
@@ -94,10 +88,7 @@ function ErrorGoalPackDashboard({ isRetrying, onRetry }: ErrorGoalPackDashboardP
 }
 
 export function GoalPackDashboard() {
-  const [reward, setReward] = useState<GoalPackMomentumReward | null>(null);
   const dashboardQuery = useGoalPackDashboard();
-  const completeActionMutation = useCompleteGoalAction();
-  const dismissActionMutation = useDismissGoalAction();
   const recalculateMutation = useRecalculateActiveGoalPlan();
 
   if (dashboardQuery.isLoading) return <LoadingGoalPackDashboard />;
@@ -135,10 +126,6 @@ export function GoalPackDashboard() {
             <span>{model.lastCalculatedLabel}</span>
           </div>
         </div>
-        <div className="goal-pack-dashboard-score" aria-label="Plan confidence">
-          <strong>{model.confidenceScore}%</strong>
-          <span>confidence</span>
-        </div>
       </div>
 
       <div className="goal-pack-dashboard-progress">
@@ -158,97 +145,41 @@ export function GoalPackDashboard() {
       <div className="goal-pack-dashboard-metrics">
         {model.metrics.map((metric) => (
           <article key={metric.label} className={`goal-pack-dashboard-metric is-${metric.tone}`}>
-            <span>{metric.label}</span>
+            <span className="goal-pack-dashboard-metric-label">
+              {metric.label}
+              {metric.isProjected ? <ProjectedResultDisclosure /> : null}
+            </span>
             <strong>{metric.value}</strong>
           </article>
         ))}
       </div>
-
-      <aside className="goal-pack-dashboard-assumption" aria-label="Goal Pack estimate note">
-        <AlertCircle size={17} aria-hidden="true" />
-        <p>
-          <strong>Estimate note:</strong> {model.packRiskCopy} Verify your details before making
-          financial, debt, tax, mortgage, legal, or investment decisions.
-        </p>
-      </aside>
-
-      {reward ? (
-        <aside className="goal-pack-dashboard-reward" aria-live="polite">
-          <CheckCircle2 size={18} aria-hidden="true" />
-          <div>
-            <strong>{reward.title}</strong>
-            <p>{reward.body}</p>
-            <small>{reward.impactLabel}</small>
-          </div>
-        </aside>
-      ) : null}
 
       <div className="goal-pack-dashboard-grid">
         <article className="goal-pack-dashboard-panel">
           <div className="goal-pack-dashboard-panel-heading">
             <Target size={18} aria-hidden="true" />
             <div>
-              <p className="section-kicker">Next action</p>
+              <p className="section-kicker">Recommended next move</p>
               <h4>{model.actionTitle}</h4>
             </div>
           </div>
           <p>{model.actionDescription}</p>
-          <small>{model.actionImpact}</small>
-          {model.actionId ? (
-            <div className="goal-pack-dashboard-action-buttons">
-              <Button
-                type="button"
-                size="sm"
-                leftIcon={<CheckCircle2 size={14} />}
-                isLoading={completeActionMutation.isPending}
-                disabled={dismissActionMutation.isPending}
-                onClick={() => {
-                  if (!model.actionId) return;
-
-                  setReward(null);
-                  void completeActionMutation
-                    .mutateAsync({ actionId: model.actionId })
-                    .then((result) => {
-                      setReward(buildGoalPackMomentumReward(result.action));
-                    })
-                    .catch(() => undefined);
-                }}
-              >
-                Complete
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                leftIcon={<X size={14} />}
-                isLoading={dismissActionMutation.isPending}
-                disabled={completeActionMutation.isPending}
-                onClick={() => {
-                  if (!model.actionId) return;
-                  setReward(null);
-                  void dismissActionMutation
-                    .mutateAsync({ actionId: model.actionId })
-                    .catch(() => undefined);
-                }}
-              >
-                Dismiss
-              </Button>
-            </div>
-          ) : null}
-          {completeActionMutation.isError || dismissActionMutation.isError ? (
-            <p className="goal-pack-dashboard-action-error" role="alert">
-              Action update failed. If the plan refresh could not finish, BudgBeacon restored the
-              action so you can try again.
-            </p>
-          ) : null}
+          {model.actionHref && model.actionLabel ? (
+            <Link className="btn btn--primary btn--sm" to={model.actionHref}>
+              <span>{model.actionLabel}</span>
+              <ArrowRight size={14} aria-hidden="true" />
+            </Link>
+          ) : (
+            <small>Use this guidance when you are ready to update the plan.</small>
+          )}
         </article>
 
-        <details className="goal-pack-dashboard-panel goal-pack-dashboard-panel--details">
+        <details className="goal-pack-dashboard-panel goal-pack-dashboard-panel--details" open>
           <summary className="goal-pack-dashboard-panel-heading">
             <RefreshCw size={18} aria-hidden="true" />
             <div>
               <p className="section-kicker">Plan drivers</p>
-              <h4>Why the date moved</h4>
+              <h4>What shapes your target date</h4>
             </div>
           </summary>
           <div className="goal-pack-dashboard-driver-list">
@@ -280,7 +211,6 @@ export function GoalPackDashboard() {
           leftIcon={<RefreshCw size={16} />}
           isLoading={recalculateMutation.isPending}
           onClick={() => {
-            setReward(null);
             void recalculateMutation.mutateAsync(undefined).catch(() => undefined);
           }}
         >

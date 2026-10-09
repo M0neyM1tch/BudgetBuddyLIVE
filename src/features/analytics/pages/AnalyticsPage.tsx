@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import './AnalyticsPage.css';
+import { normalizeError } from '../../../shared/api/errors';
 import { EmptyState } from '../../../shared/components/feedback/EmptyState';
 import { ErrorState } from '../../../shared/components/feedback/ErrorState';
 import { env } from '../../../shared/lib/env';
@@ -44,6 +45,8 @@ export function AnalyticsPage() {
     priorTransactionsQuery.isError ||
     goalsQuery.isError ||
     debtsQuery.isError;
+  const blockingError = transactionsQuery.error ?? priorTransactionsQuery.error ??
+    goalsQuery.error ?? debtsQuery.error;
   const hasNoTransactions = !transactionsQuery.isLoading && transactions.length === 0;
 
   function retryAll() {
@@ -77,7 +80,9 @@ export function AnalyticsPage() {
       {hasBlockingError ? (
         <ErrorState
           title="Analytics could not be loaded"
-          message="Refresh the analytics data before making decisions from this view."
+          message={blockingError
+            ? normalizeError(blockingError).message
+            : 'Refresh the analytics data before making decisions from this view.'}
           onRetry={retryAll}
         />
       ) : (

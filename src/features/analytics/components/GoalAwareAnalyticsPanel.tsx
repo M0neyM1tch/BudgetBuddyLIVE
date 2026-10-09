@@ -1,6 +1,7 @@
-import { AlertCircle, ArrowRight, ChartNoAxesColumnIncreasing, Target } from 'lucide-react';
+import { ArrowRight, ChartNoAxesColumnIncreasing, Target } from 'lucide-react';
 import { useMemo } from 'react';
 import { Button } from '../../../shared/components/ui/Button';
+import { ProjectedResultDisclosure } from '../../../shared/components/ui/ProjectedResultDisclosure';
 import { useGoalPackDashboard, useGoalPlanSnapshots, type GoalType } from '../../goalPacks';
 import {
   buildGoalAwareAnalyticsModel,
@@ -151,21 +152,15 @@ export function GoalAwareAnalyticsPanel({
             <div className="goal-aware-analytics-metrics" aria-label="Goal-aware analytics metrics">
               {model.metrics.map((metric) => (
                 <div className="goal-aware-analytics-metric" data-tone={metric.tone} key={metric.label}>
-                  <span>{metric.label}</span>
+                  <span className="goal-aware-analytics-metric-label">
+                    {metric.label}
+                    {metric.isProjected ? <ProjectedResultDisclosure /> : null}
+                  </span>
                   <strong>{metric.value}</strong>
                 </div>
               ))}
             </div>
           </div>
-
-          <aside className="goal-aware-analytics-disclosure" aria-label="Goal impact assumptions">
-            <AlertCircle size={17} aria-hidden="true" />
-            <p>
-              <strong>Scenario note:</strong> Goal impact uses user-entered transactions,
-              active-goal data, and the selected date range. Spending levers are comparison
-              scenarios only, not recommendations to change spending or move money.
-            </p>
-          </aside>
 
           <div className="goal-aware-analytics-grid">
             <div>

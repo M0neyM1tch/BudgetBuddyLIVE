@@ -17,6 +17,7 @@ const goal: GoalPlanGoal = {
   id: '00000000-0000-4000-8000-000000000001',
   is_archived: false,
   last_plan_calculated_at: '2026-06-30T00:00:00.000Z',
+  linked_debt_id: null,
   monthly_commitment_cents: 500_00,
   name: 'First home fund',
   plan_status: 'active',
@@ -114,8 +115,9 @@ describe('buildGoalPackDashboardModel', () => {
       'Remaining gap',
       'Projected date',
       'Required monthly',
-      'Confidence',
     ]);
+    expect(model?.metrics.some((metric) => metric.label === 'Confidence')).toBe(false);
+    expect(model?.actionHref).toBe('/dashboard/goals');
   });
 
   it('uses debt-specific labels for debt payoff goals', () => {
@@ -151,5 +153,45 @@ describe('buildGoalPackDashboardModel', () => {
 
     expect(model?.actionId).toBeNull();
     expect(model?.actionType).toBe('review_spending_leak');
+  });
+
+  it('routes a debt contribution action through the relational debt link', () => {
+    const model = buildGoalPackDashboardModel({
+      actions: [
+        {
+          ...action,
+          action_type: 'confirm_contribution',
+        },
+      ],
+      goal: {
+        ...goal,
+        goal_type: 'debt_payoff',
+        linked_debt_id: 'debt-1',
+      } as GoalPlanGoal,
+      priority: {
+        ...priority,
+        top_priority_type: 'debt_payoff',
+      },
+      snapshot,
+    });
+
+    expect(model?.actionHref).toBe('/dashboard/transactions?new=1&debt_id=debt-1');
+    expect(model?.actionLabel).toBe('Add debt payment');
+  });
+
+  it('does not route a completed priority to another contribution', () => {
+    const model = buildGoalPackDashboardModel({
+      actions: [{ ...action, action_type: 'confirm_contribution' }],
+      goal: {
+        ...goal,
+        current_amount_cents: goal.target_amount_cents,
+      },
+      priority,
+      snapshot,
+    });
+
+    expect(model?.amountRemainingCents).toBe(0);
+    expect(model?.actionHref).toBe('/dashboard/goals');
+    expect(model?.actionLabel).toBe('Review completed priority');
   });
 });

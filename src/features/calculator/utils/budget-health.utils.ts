@@ -23,6 +23,12 @@ export const DEFAULT_BUDGET_TARGETS: BudgetHealthTargets = {
 };
 
 export function classifyTransactionBudgetBucket(transaction: CalculatorTransaction): BudgetBucket {
+  if (
+    transaction.kind === 'transfer' &&
+    (transaction.category === 'savings' || transaction.category === 'debt_payment')
+  ) {
+    return 'savings';
+  }
   if (transaction.kind !== 'expense') return 'ignore';
   return CATEGORY_BUCKETS[transaction.category] ?? 'wants';
 }
@@ -38,9 +44,14 @@ export function buildBudgetHealthBreakdown(
   const buckets = transactions.reduce(
     (summary, transaction) => {
       const bucket = classifyTransactionBudgetBucket(transaction);
-      if (bucket === 'needs') summary.needsCents += transaction.amountCents;
-      if (bucket === 'wants') summary.wantsCents += transaction.amountCents;
-      if (bucket === 'savings') summary.savingsCents += transaction.amountCents;
+      // Allocations can be capped by the remaining goal/debt balance. Count the
+      // recorded applied amount, never the requested amount when it is missing.
+      const amountCents = transaction.kind === 'transfer'
+        ? transaction.allocationAppliedCents ?? 0
+        : transaction.amountCents;
+      if (bucket === 'needs') summary.needsCents += amountCents;
+      if (bucket === 'wants') summary.wantsCents += amountCents;
+      if (bucket === 'savings') summary.savingsCents += amountCents;
       return summary;
     },
     { needsCents: 0, wantsCents: 0, savingsCents: 0 },

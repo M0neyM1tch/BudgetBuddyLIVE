@@ -26,6 +26,7 @@ export type GoalAwareAnalyticsPlanInput = {
 };
 
 export type GoalAwareAnalyticsMetric = {
+  isProjected?: boolean;
   label: string;
   tone: InsightTone;
   value: string;
@@ -382,20 +383,9 @@ export function buildGoalAwareAnalyticsModel({
       },
       {
         label: 'Projected date',
+        isProjected: Boolean(plan.projectedCompletionDate),
         tone: plan.projectedCompletionDate ? 'neutral' : 'watch',
         value: formatDateLabel(plan.projectedCompletionDate),
-      },
-      {
-        label: 'Confidence',
-        tone:
-          plan.confidenceScore === null
-            ? 'neutral'
-            : plan.confidenceScore >= 75
-              ? 'good'
-              : plan.confidenceScore >= 45
-                ? 'watch'
-                : 'risk',
-        value: plan.confidenceScore === null ? 'New' : `${plan.confidenceScore}%`,
       },
     ],
     planStatus: status,
