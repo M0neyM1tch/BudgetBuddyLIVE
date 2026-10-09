@@ -2,7 +2,7 @@
 
 Personal finance application for goals, debts, transactions, recurring activity, and financial planning.
 
-Start with [project status](docs/project-status.md) for the current release state and [the release runbook](docs/release-runbook.md) before promoting changes. The Product/UX Follow-Ups 2 candidate has been rehearsed, but its production promotion is not verified complete. A frontend deployment must follow its database migrations.
+Use [project status](docs/project-status.md) for the environment map and known limits, and the [release runbook](docs/release-runbook.md) before deploying. [Stabilization PR #4](https://github.com/M0neyM1tch/BudgetBuddyLIVE/pull/4) tracks the reviewed release, validation, and deployment outcome. Develop locally against rehearsal; database readiness must precede production frontend activation.
 
 ## Stack
 
