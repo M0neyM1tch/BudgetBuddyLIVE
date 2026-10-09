@@ -17,6 +17,8 @@ const {
   createTransaction,
   fetchQuickAddChips,
   fetchTransactionSummary,
+  fetchTransactions,
+  fetchCompleteTransactionHistory,
   updateRecurringRule,
   updateTransaction,
 } = await import('./transactions.api');
@@ -30,6 +32,49 @@ const baseDraft: TransactionDraft = {
   notes: null,
   source: 'manual',
 };
+
+describe('complete history versus paginated browsing', () => {
+  beforeEach(() => {
+    fromMock.mockReset();
+    vi.useRealTimers();
+  });
+
+  function respond(data: unknown[], count: number | null) {
+    const query = Object.assign(Promise.resolve({ data, count, error: null }), {
+      select: vi.fn(), eq: vi.fn(), order: vi.fn(), range: vi.fn(), gte: vi.fn(), lte: vi.fn(), or: vi.fn(),
+    });
+    for (const step of [query.select, query.eq, query.order, query.range, query.gte, query.lte, query.or]) step.mockReturnValue(query);
+    fromMock.mockReturnValue(query);
+    return query;
+  }
+
+  it('loads a complete goal/debt history above the former 500-row cap with the original filters', async () => {
+    const data = Array.from({ length: 501 }, (_, id) => ({ id }));
+    const query = respond(data, 501);
+    await expect(fetchCompleteTransactionHistory('owner', { category: 'debt_payment' })).resolves.toEqual(data);
+    expect(query.range).not.toHaveBeenCalled();
+    expect(query.eq).toHaveBeenCalledWith('user_id', 'owner');
+    expect(query.eq).toHaveBeenCalledWith('category', 'debt_payment');
+    expect(query.select).toHaveBeenCalledWith('*', { count: 'exact' });
+  });
+
+  it('rejects missing or mismatching exact counts', async () => {
+    for (const count of [null, 2]) {
+      respond([{ id: 'row' }], count);
+      await expect(fetchCompleteTransactionHistory('owner', {})).rejects.toMatchObject({ code: 'INCOMPLETE_DATA' });
+    }
+    respond([], 0);
+    await expect(fetchCompleteTransactionHistory('owner', {})).resolves.toEqual([]);
+  });
+
+  it('continues returning ordinary transaction pages when more rows exist', async () => {
+    const query = respond([{ id: 'row' }], 26);
+    await expect(fetchTransactions('owner', {}, 1, 25)).resolves.toMatchObject({
+      rows: [{ id: 'row' }], count: 26, page: 1, pageSize: 25,
+    });
+    expect(query.range).toHaveBeenCalledWith(25, 49);
+  });
+});
 
 describe('createTransaction linked RPC behavior', () => {
   beforeEach(() => {
@@ -87,6 +132,39 @@ describe('createRecurringRule', () => {
     fromMock.mockReset();
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-07-04T12:00:00'));
+  });
+
+  it('preserves a future first occurrence when the hidden skip-backdate flag remains set', async () => {
+    const insertMock = vi.fn(() => ({
+      select: () => ({
+        single: async () => ({
+          data: { id: 'rule-id', start_date: '2026-08-01', next_run_date: '2026-08-01' },
+          error: null,
+        }),
+      }),
+    }));
+    fromMock.mockReturnValueOnce({ insert: insertMock });
+
+    const result = await createRecurringRule('user-id', {
+      amount_cents: 25_000,
+      category: 'housing',
+      day_of_month: 1,
+      description: 'Future bill',
+      frequency: 'monthly',
+      is_active: true,
+      kind: 'expense',
+      next_run_date: '2026-08-01',
+      notes: null,
+      skip_backdate: true,
+      start_date: '2026-08-01',
+    });
+
+    expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({
+      start_date: '2026-08-01',
+      next_run_date: '2026-08-01',
+    }));
+    expect(fromMock).toHaveBeenCalledTimes(1);
+    expect(result.next_run_date).toBe('2026-08-01');
   });
 
   it('prevents skip-backdate rules from saving a past next run date', async () => {

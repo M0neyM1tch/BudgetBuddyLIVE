@@ -2,11 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const fromMock = vi.fn();
 const upsertMock = vi.fn();
-const deletedTables: string[] = [];
+const rpcMock = vi.fn();
+const rpcSingleMock = vi.fn();
 
 vi.mock('../../../shared/lib/supabase', () => ({
   supabase: {
     from: fromMock,
+    rpc: rpcMock,
   },
 }));
 
@@ -38,59 +40,62 @@ function configurePreferenceResponse(onboardingCompletedAt: string | null) {
       return { upsert: upsertMock };
     }
 
-    return {
-      delete: () => ({
-        eq: async () => {
-          deletedTables.push(table);
-          return { error: null };
-        },
-      }),
-    };
+    throw new Error(`Unexpected table request: ${table}`);
   });
 }
 
 beforeEach(() => {
   fromMock.mockReset();
   upsertMock.mockReset();
-  deletedTables.length = 0;
+  rpcMock.mockReset().mockReturnValue({ single: rpcSingleMock });
+  rpcSingleMock.mockReset();
 });
 
 describe('onboarding preference reset contract', () => {
-  it('persists a null completion state and returns the same state for clean-slate reset', async () => {
-    configurePreferenceResponse(null);
+  it('uses one owner-derived reset RPC without independent deletes or preference writes', async () => {
+    rpcSingleMock.mockResolvedValue({
+      data: { user_id: 'user-id', onboarding_completed_at: null, dismissed_tooltips: [] },
+      error: null,
+    });
 
     const preferences = await resetOnboardingWithCleanSlate('user-id');
 
-    expect(upsertMock).toHaveBeenCalledWith(
-      {
-        dismissed_tooltips: [],
-        onboarding_completed_at: null,
-        quick_add_chips: [],
-        user_id: 'user-id',
-      },
-      { onConflict: 'user_id' },
-    );
+    expect(rpcMock).toHaveBeenCalledExactlyOnceWith('reset_onboarding_with_clean_slate');
+    expect(fromMock).not.toHaveBeenCalled();
+    expect(upsertMock).not.toHaveBeenCalled();
     expect(preferences.onboarding_completed_at).toBeNull();
-    expect(deletedTables).toEqual([
-      'goal_actions',
-      'goal_plan_snapshots',
-      'financial_priorities',
-      'transactions',
-      'recurring_rules',
-      'goals',
-      'debts',
-    ]);
+    expect(preferences.dismissed_tooltips).toEqual([]);
   });
 
-  it('keeps repeated clean-slate resets idempotent', async () => {
-    configurePreferenceResponse(null);
+  it.each([
+    ['a lock conflict', { code: '55P03', message: 'Another reset is in progress. Refresh and try again.' }],
+    ['a failed final preference write', { code: '23514', message: 'Preference update failed' }],
+    ['an unavailable migration', { code: 'PGRST202', message: 'Reset is unavailable' }],
+  ])('surfaces %s without falling back to separate destructive requests', async (_label, error) => {
+    rpcSingleMock.mockResolvedValue({ data: null, error });
+    await expect(resetOnboardingWithCleanSlate('user-id')).rejects.toMatchObject(error);
+    expect(rpcMock).toHaveBeenCalledTimes(1);
+    expect(fromMock).not.toHaveBeenCalled();
+  });
 
-    const first = await resetOnboardingWithCleanSlate('user-id');
-    const second = await resetOnboardingWithCleanSlate('user-id');
+  it.each([
+    null,
+    { user_id: 'different-user', onboarding_completed_at: null, dismissed_tooltips: [] },
+    { user_id: 'user-id', onboarding_completed_at: '2026-10-08T00:00:00Z', dismissed_tooltips: [] },
+  ])('does not confirm reset from a missing, wrong-owner or incomplete response', async (data) => {
+    rpcSingleMock.mockResolvedValue({ data, error: null });
+    await expect(resetOnboardingWithCleanSlate('user-id')).rejects.toMatchObject({ code: 'RESET_NOT_CONFIRMED' });
+    expect(fromMock).not.toHaveBeenCalled();
+  });
 
-    expect(first.onboarding_completed_at).toBeNull();
-    expect(second.onboarding_completed_at).toBeNull();
-    expect(upsertMock).toHaveBeenCalledTimes(2);
+  it('describes a lost network response as unconfirmed and does not repeat the reset', async () => {
+    rpcSingleMock.mockResolvedValue({ data: null, error: { code: '', message: 'Failed to fetch' } });
+    await expect(resetOnboardingWithCleanSlate('user-id')).rejects.toMatchObject({
+      code: 'RESET_NOT_CONFIRMED',
+      message: 'The reset could not be confirmed. Refresh your workspace before trying again.',
+    });
+    expect(rpcMock).toHaveBeenCalledTimes(1);
+    expect(fromMock).not.toHaveBeenCalled();
   });
 
   it('continues to persist a fresh timestamp for normal completion', async () => {

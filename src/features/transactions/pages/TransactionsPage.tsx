@@ -303,11 +303,7 @@ export function TransactionsPage() {
       return;
     }
 
-    const effectiveDraft: RecurringRuleDraft = draft.skip_backdate
-      ? { ...draft, next_run_date: today() }
-      : draft;
-
-    await createRecurringRuleMutation.mutateAsync(effectiveDraft);
+    await createRecurringRuleMutation.mutateAsync(draft);
 
     if (!draft.skip_backdate && draft.start_date <= today()) {
       await processRecurringCatchup('Rule added. Due occurrences will sync overnight.');

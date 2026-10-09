@@ -833,6 +833,14 @@ export type Database = {
         Args: { p_through?: string; p_user_id?: string }
         Returns: Json
       }
+      reset_onboarding_with_clean_slate: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          dismissed_tooltips: string[]
+          onboarding_completed_at: string | null
+          user_id: string
+        }[]
+      }
       update_debt_payment_transaction: {
         Args: {
           p_amount_cents: number

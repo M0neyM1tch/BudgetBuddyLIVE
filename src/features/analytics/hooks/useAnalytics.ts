@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { AppError } from '../../../shared/api/errors';
 import { useAuth } from '../../auth/hooks/useAuth';
 import {
@@ -38,7 +38,6 @@ export function useAnalyticsTransactions(range: DateRange) {
     queryKey: userId ? analyticsKeys.transactions(userId, range) : analyticsKeys.all,
     queryFn: () => fetchAnalyticsTransactions(requireUserId(userId), range),
     enabled: Boolean(userId),
-    placeholderData: keepPreviousData,
     staleTime: 1000 * 60,
   });
 }
@@ -51,7 +50,6 @@ export function usePriorPeriodTransactions(range: DateRange) {
     queryKey: userId ? analyticsKeys.priorTransactions(userId, priorRange) : analyticsKeys.all,
     queryFn: () => fetchAnalyticsTransactions(requireUserId(userId), priorRange),
     enabled: Boolean(userId),
-    placeholderData: keepPreviousData,
     staleTime: 1000 * 60,
   });
 }

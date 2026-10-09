@@ -226,11 +226,23 @@ export function GoalsPage() {
         <summary className="planner-collapsible-toggle">
           <span>Goal Timeline Projector</span>
         </summary>
-        <GoalTimelineProjector
-          goals={activeGoals}
-          transactions={goalTransactionsQuery.data ?? []}
-          isLoadingTransactions={goalTransactionsQuery.isLoading}
-        />
+        {goalTransactionsQuery.error ? (
+          <ErrorState
+            title="Goal projection could not load"
+            message={normalizeError(goalTransactionsQuery.error).message}
+            onRetry={() => {
+              void goalTransactionsQuery.refetch();
+            }}
+          />
+        ) : goalTransactionsQuery.isLoading ? (
+          <LoadingState label="Loading goal contribution history" />
+        ) : (
+          <GoalTimelineProjector
+            goals={activeGoals}
+            transactions={goalTransactionsQuery.data ?? []}
+            isLoadingTransactions={goalTransactionsQuery.isLoading}
+          />
+        )}
       </details>
 
       {activeGoals.length === 0 ? (

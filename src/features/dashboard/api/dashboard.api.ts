@@ -1,4 +1,5 @@
 import { normalizeError, AppError } from '../../../shared/api/errors';
+import { requireCompleteRows } from '../../../shared/api/completeRows';
 import { supabase } from '../../../shared/lib/supabase';
 import type {
   DashboardCashFlow,
@@ -48,19 +49,19 @@ export async function fetchDashboardKpis(userId: string): Promise<DashboardKpis>
   const [transactionsResult, goalsResult, debtsResult] = await Promise.all([
     supabase
       .from('transactions')
-      .select('amount_cents, kind, transaction_date')
+      .select('amount_cents, kind, transaction_date', { count: 'exact' })
       .eq('user_id', userId)
       .in('kind', ['income', 'expense'])
       .gte('transaction_date', bounds.previousStart)
       .lt('transaction_date', bounds.nextStart),
     supabase
       .from('goals')
-      .select('current_amount_cents')
+      .select('current_amount_cents', { count: 'exact' })
       .eq('user_id', userId)
       .eq('is_archived', false),
     supabase
       .from('debts')
-      .select('current_balance_cents')
+      .select('current_balance_cents', { count: 'exact' })
       .eq('user_id', userId)
       .eq('is_archived', false),
   ]);
@@ -69,10 +70,14 @@ export async function fetchDashboardKpis(userId: string): Promise<DashboardKpis>
   if (goalsResult.error) raise(goalsResult.error, 'Unable to load savings total');
   if (debtsResult.error) raise(debtsResult.error, 'Unable to load debt total');
 
+  const transactions = requireCompleteRows(transactionsResult, 'dashboard transaction history');
+  const goals = requireCompleteRows(goalsResult, 'dashboard savings data');
+  const debts = requireCompleteRows(debtsResult, 'dashboard debt data');
+
   const currentMonth = emptyCashFlow();
   const previousMonth = emptyCashFlow();
 
-  for (const transaction of transactionsResult.data ?? []) {
+  for (const transaction of transactions) {
     const target =
       transaction.transaction_date >= bounds.currentStart ? currentMonth : previousMonth;
 
@@ -90,11 +95,11 @@ export async function fetchDashboardKpis(userId: string): Promise<DashboardKpis>
   return {
     currentMonth,
     previousMonth,
-    totalSavingsCents: (goalsResult.data ?? []).reduce(
+    totalSavingsCents: goals.reduce(
       (sum, goal) => sum + goal.current_amount_cents,
       0,
     ),
-    totalDebtCents: (debtsResult.data ?? []).reduce(
+    totalDebtCents: debts.reduce(
       (sum, debt) => sum + debt.current_balance_cents,
       0,
     ),

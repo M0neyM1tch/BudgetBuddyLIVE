@@ -3,11 +3,14 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import { TransactionsPage } from '../TransactionsPage';
+import type { RecurringRuleDraft } from '../../types/transactions.types';
 
 const mocks = vi.hoisted(() => ({
   useGoals: vi.fn(),
   useDebts: vi.fn(),
   useActiveFinancialPriority: vi.fn(),
+  createRecurringRule: vi.fn(),
+  recurringDraft: undefined as RecurringRuleDraft | undefined,
 }));
 
 vi.mock('../../../goals/hooks/useGoals', () => ({ useGoals: mocks.useGoals }));
@@ -26,7 +29,7 @@ vi.mock('../../hooks/useTransactions', () => {
     useCreateQuickAddTransaction: () => mutation,
     useUpdateTransaction: () => mutation,
     useDeleteTransaction: () => mutation,
-    useCreateRecurringRule: () => mutation,
+    useCreateRecurringRule: () => ({ ...mutation, mutateAsync: mocks.createRecurringRule }),
     useUpdateRecurringRule: () => mutation,
     useDeleteRecurringRule: () => mutation,
     useProcessRecurringRules: () => mutation,
@@ -45,8 +48,14 @@ vi.mock('../../components/TransactionList', () => ({ TransactionList: () => null
 vi.mock('../../components/TransactionSummaryBar', () => ({ TransactionSummaryBar: () => null }));
 vi.mock('../../components/QuickAddCards', () => ({ QuickAddCards: () => null }));
 vi.mock('../../components/ActivePriorityContext', () => ({ ActivePriorityContext: () => null }));
-vi.mock('../../components/RecurringRulesPanel', () => ({ RecurringRulesPanel: () => null }));
-vi.mock('../../components/RecurringRuleModal', () => ({ RecurringRuleModal: () => null }));
+vi.mock('../../components/RecurringRulesPanel', () => ({
+  RecurringRulesPanel: ({ onAdd }: { onAdd: () => void }) => <button onClick={onAdd}>Add recurring rule</button>,
+}));
+vi.mock('../../components/RecurringRuleModal', () => ({
+  RecurringRuleModal: ({ isOpen, onSubmit }: { isOpen: boolean; onSubmit: (draft: RecurringRuleDraft) => Promise<void> }) => (
+    isOpen && mocks.recurringDraft ? <button onClick={() => { void onSubmit(mocks.recurringDraft!); }}>Save recurring rule</button> : null
+  ),
+}));
 vi.mock('../../components/DeleteRecurringRuleModal', () => ({ DeleteRecurringRuleModal: () => null }));
 vi.mock('../../components/DeleteTransactionModal', () => ({ DeleteTransactionModal: () => null }));
 vi.mock('../../components/QuickAddChipModal', () => ({ QuickAddChipModal: () => null }));
@@ -78,6 +87,36 @@ describe('TransactionsPage URL prefills', () => {
     mocks.useDebts.mockReturnValue({ data: debts, isError: false, isLoading: false, isSuccess: true });
     mocks.useActiveFinancialPriority.mockReturnValue({ data: undefined, isLoading: false });
   }
+
+  it('does not move a future first occurrence to today when skip-backdate remains set', async () => {
+    const user = userEvent.setup();
+    setLoadedTargets();
+    mocks.createRecurringRule.mockResolvedValueOnce({ id: 'rule-id' });
+    mocks.recurringDraft = {
+      amount_cents: 25_000,
+      category: 'housing',
+      day_of_month: 1,
+      description: 'Future bill',
+      frequency: 'monthly',
+      is_active: true,
+      kind: 'expense',
+      next_run_date: '2099-08-01',
+      notes: null,
+      skip_backdate: true,
+      start_date: '2099-08-01',
+    };
+    renderPage('/transactions');
+
+    await user.click(screen.getByRole('button', { name: 'Add recurring rule' }));
+    await user.click(screen.getByRole('button', { name: 'Save recurring rule' }));
+
+    expect(mocks.createRecurringRule).toHaveBeenCalledWith(expect.objectContaining({
+      next_run_date: '2099-08-01',
+      start_date: '2099-08-01',
+      skip_backdate: true,
+    }));
+    mocks.recurringDraft = undefined;
+  });
 
   it('opens a valid active goal once and router-clears only consumed prefill parameters', async () => {
     const user = userEvent.setup();

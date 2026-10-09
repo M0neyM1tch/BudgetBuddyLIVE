@@ -13,6 +13,7 @@ export type CalculatorTabKey =
 export type CalculatorTransaction = {
   id: string;
   amountCents: number;
+  allocationAppliedCents?: number;
   category: string;
   date: string;
   description: string;

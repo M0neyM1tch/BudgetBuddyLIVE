@@ -1,4 +1,5 @@
 import { normalizeError, AppError } from '../../../shared/api/errors';
+import { requireCompleteRows } from '../../../shared/api/completeRows';
 import { supabase } from '../../../shared/lib/supabase';
 import { today } from '../../../shared/utils/dates';
 import type { Database, Json } from '../../../types/database.types';
@@ -116,23 +117,18 @@ function integerCents(value: number | string | null | undefined): number {
  */
 const transactionRpc = supabase.rpc.bind(supabase) as TransactionRpc;
 
-export async function fetchTransactions(
+function transactionHistoryQuery(
   userId: string,
   filters: TransactionFilters,
-  page = 0,
-  pageSize = 25,
-): Promise<TransactionPage> {
+) {
   const parsedFilters = transactionFiltersSchema.parse(filters);
-  const from = page * pageSize;
-  const to = from + pageSize - 1;
 
   let query = supabase
     .from('transactions')
     .select('*', { count: 'exact' })
     .eq('user_id', userId)
     .order('transaction_date', { ascending: false })
-    .order('created_at', { ascending: false })
-    .range(from, to);
+    .order('created_at', { ascending: false });
 
   if (parsedFilters.from) query = query.gte('transaction_date', parsedFilters.from);
   if (parsedFilters.to) query = query.lte('transaction_date', parsedFilters.to);
@@ -154,7 +150,27 @@ export async function fetchTransactions(
     );
   }
 
-  const { data, count, error } = await query;
+  return query;
+}
+
+export async function fetchCompleteTransactionHistory(
+  userId: string,
+  filters: TransactionFilters,
+): Promise<Transaction[]> {
+  const result = await transactionHistoryQuery(userId, filters);
+  if (result.error) raise(result.error, 'Unable to load transaction history');
+  return requireCompleteRows(result, 'transaction history');
+}
+
+export async function fetchTransactions(
+  userId: string,
+  filters: TransactionFilters,
+  page = 0,
+  pageSize = 25,
+): Promise<TransactionPage> {
+  const from = page * pageSize;
+  const to = from + pageSize - 1;
+  const { data, count, error } = await transactionHistoryQuery(userId, filters).range(from, to);
   if (error) raise(error, 'Unable to load transactions');
   return {
     rows: data ?? [],

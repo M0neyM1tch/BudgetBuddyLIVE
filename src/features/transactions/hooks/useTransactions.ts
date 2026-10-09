@@ -14,6 +14,7 @@ import {
   fetchRecurringRules,
   fetchTransactionSummary,
   fetchTransactions,
+  fetchCompleteTransactionHistory,
   processDueRecurringRules,
   saveQuickAddChips,
   updateRecurringRule,
@@ -39,6 +40,8 @@ export const transactionKeys = {
     [...transactionKeys.all, 'quick-add-chips', userId] as const,
   page: (userId: string, filters: TransactionFilters, page: number, pageSize: number) =>
     [...transactionKeys.list(userId, filters), page, pageSize] as const,
+  history: (userId: string, filters: TransactionFilters) =>
+    [...transactionKeys.list(userId, filters), 'complete-history'] as const,
   summaries: () => [...transactionKeys.all, 'summary'] as const,
   summary: (userId: string, filters: TransactionFilters) =>
     [...transactionKeys.summaries(), userId, filters] as const,
@@ -84,11 +87,17 @@ export function useTransactionsPage(filters: TransactionFilters, page = 0, pageS
 }
 
 export function useTransactions(filters: TransactionFilters) {
-  const query = useTransactionsPage(filters, 0, 500);
+  const userId = useRequiredUserId();
+  const query = useQuery({
+    queryKey: transactionKeys.history(userId ?? '', filters),
+    queryFn: () => fetchCompleteTransactionHistory(requireUserId(userId), filters),
+    enabled: Boolean(userId),
+  });
 
   return {
     ...query,
-    data: query.data?.rows,
+    // A failed refresh must not keep an older history available to projections.
+    data: query.isError ? undefined : query.data,
   };
 }
 

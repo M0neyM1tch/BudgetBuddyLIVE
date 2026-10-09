@@ -191,6 +191,22 @@ export function DebtsPage() {
     );
   }
 
+  if (debtPaymentsQuery.error) {
+    return (
+      <ErrorState
+        title="Debt payment history could not load"
+        message={normalizeError(debtPaymentsQuery.error).message}
+        onRetry={() => {
+          void debtPaymentsQuery.refetch();
+        }}
+      />
+    );
+  }
+
+  if (debtPaymentsQuery.isLoading) {
+    return <LoadingState label="Loading debt payment history" />;
+  }
+
   return (
     <section className="page page--wide debts-page" aria-labelledby="debts-title">
       <div className="page-header debts-page-header">
