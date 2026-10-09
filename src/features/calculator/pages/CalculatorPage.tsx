@@ -14,10 +14,7 @@ import { useCalculatorPrefillData } from '../hooks/useCalculator';
 import type { CalculatorTabKey } from '../types/calculator.types';
 import './CalculatorPage.css';
 
-export function CalculatorPage() {
-  const [activeTab, setActiveTab] = useState<CalculatorTabKey>(
-    env.features.goalPacksEnabled ? 'goal-plan' : 'compound-growth',
-  );
+function PrefilledCalculator({ activeTab }: { activeTab: CalculatorTabKey }) {
   const prefill = useCalculatorPrefillData();
 
   if (prefill.isLoading) {
@@ -33,6 +30,23 @@ export function CalculatorPage() {
       />
     );
   }
+
+  return (
+    <>
+      {activeTab === 'goal-plan' && env.features.goalPacksEnabled ? (
+        <GoalPlanSimulator data={prefill.data} />
+      ) : null}
+      {activeTab === 'freedom-number' ? <FreedomNumberCalculator data={prefill.data} /> : null}
+      {activeTab === 'compound-growth' ? <CompoundGrowthCalculator data={prefill.data} /> : null}
+      {activeTab === 'recurring-costs' ? <RecurringCostAnalyzer data={prefill.data} /> : null}
+    </>
+  );
+}
+
+export function CalculatorPage() {
+  const [activeTab, setActiveTab] = useState<CalculatorTabKey>(
+    env.features.goalPacksEnabled ? 'goal-plan' : 'compound-growth',
+  );
 
   return (
     <section className="page page--wide calculator-page" aria-labelledby="calculator-title">
@@ -65,13 +79,7 @@ export function CalculatorPage() {
       </OnboardingTooltip>
 
       <section className="calculator-panel" aria-live="polite">
-        {activeTab === 'goal-plan' && env.features.goalPacksEnabled ? (
-          <GoalPlanSimulator data={prefill.data} />
-        ) : null}
-        {activeTab === 'freedom-number' ? <FreedomNumberCalculator data={prefill.data} /> : null}
-        {activeTab === 'budget-health' ? <BudgetHealthScorer data={prefill.data} /> : null}
-        {activeTab === 'compound-growth' ? <CompoundGrowthCalculator data={prefill.data} /> : null}
-        {activeTab === 'recurring-costs' ? <RecurringCostAnalyzer data={prefill.data} /> : null}
+        {activeTab === 'budget-health' ? <BudgetHealthScorer /> : <PrefilledCalculator activeTab={activeTab} />}
       </section>
     </section>
   );

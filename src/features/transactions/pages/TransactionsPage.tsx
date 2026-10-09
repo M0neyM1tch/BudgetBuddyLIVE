@@ -513,6 +513,15 @@ export function TransactionsPage() {
     );
     return resolution.status === 'resolved' ? null : resolution.message;
   };
+  const quickAddCategory = (chip: QuickAddChip) => {
+    const resolution = resolveQuickAddTarget(
+      chip,
+      priorityQuery.data?.active_goal_id,
+      activeGoals,
+      activeDebts,
+    );
+    return resolution.status === 'resolved' ? resolution.draft.category : chip.category;
+  };
   const recurringRulesPanel = (
     <RecurringRulesPanel
       debtLabels={debtLabels}
@@ -558,6 +567,7 @@ export function TransactionsPage() {
       {urlPrefillError ? <p className="transaction-form-error" role="alert">{urlPrefillError}</p> : null}
 
       <QuickAddCards
+        getChipCategory={quickAddCategory}
         chips={quickAddQuery.data ?? []}
         isLoading={quickAddQuery.isLoading}
         isSaving={saveQuickAddMutation.isPending}

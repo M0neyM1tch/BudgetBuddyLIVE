@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { Button } from './Button';
 
 type ModalProps = {
@@ -19,6 +19,7 @@ export function Modal({
   onClose,
 }: ModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -37,12 +38,12 @@ export function Modal({
     <dialog
       ref={dialogRef}
       className={className ? `modal ${className}` : 'modal'}
-      aria-labelledby="modal-title"
+      aria-labelledby={titleId}
       onCancel={onClose}
       onClose={onClose}
     >
       <div className="modal-header">
-        <h2 id="modal-title" className="modal-title">
+        <h2 id={titleId} className="modal-title">
           {title}
         </h2>
         <Button

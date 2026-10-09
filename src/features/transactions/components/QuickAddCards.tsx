@@ -12,6 +12,7 @@ type QuickAddCardsProps = {
   feedback?: string;
   activePriorityName?: string | null;
   getChipIssue: (chip: QuickAddChip) => string | null;
+  getChipCategory: (chip: QuickAddChip) => string;
   onFire: (chip: QuickAddChip) => void;
   onChoosePriority: () => void;
   onEdit: (chip: QuickAddChip) => void;
@@ -27,6 +28,7 @@ export function QuickAddCards({
   feedback,
   activePriorityName,
   getChipIssue,
+  getChipCategory,
   onFire,
   onChoosePriority,
   onEdit,
@@ -99,7 +101,7 @@ export function QuickAddCards({
               </span>
               <span className="quick-add-card-copy">
                 <strong>{label}</strong>
-                <small>{issue ?? getCategoryLabel(chip.category)}</small>
+                <small>{issue ?? getCategoryLabel(getChipCategory(chip))}</small>
               </span>
               <span className="quick-add-card-amount">{centsToDisplay(chip.amount_cents)}</span>
             </button>
